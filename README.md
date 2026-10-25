@@ -27,12 +27,26 @@ The app has exactly three pages:
 - The agent pauses instead of guessing when a required field cannot be answered
   from the profile or an explicit saved answer.
 - Sensitive/eligibility questions (salary, authorization, sponsorship,
-  demographics, criminal/background, IDs, etc.) are never sent to AI. Work
+  citizenship, security clearance, demographics, criminal/background, legal
+  attestations, IDs, home/mailing address, etc.) are never sent to AI. Work
   authorization and sponsorship answers are filled only from an explicit
   work-authorization profile value or saved answer; the agent never infers them
   from country or location.
+- Citizenship, permanent-residency, security-clearance, legal-attestation, and
+  demographic questions always require an explicit saved answer. They are never
+  derived from the work-authorization statement.
+- Education dropdowns use equivalent option matching: for example, `B.Tech`
+  maps to `Bachelor's Degree`, and a school not in the list maps to
+  `Other / Not Listed`. React-select controls wait for delayed options instead of
+  assuming a fixed delay.
+- The agent waits for the page to reach network idle and settle before filling,
+  so a client-side re-render does not wipe the values it typed.
+- Optional fields that cannot be matched are skipped without blocking the run.
+  A required field with no safe answer still creates a review item.
 - AI-generated prose is shown as a review suggestion by default. It is not
   auto-filled unless `AI_AUTO_FILL_GENERATED=true`.
+- AI quota/rate-limit errors stop further AI calls for that run and fall back to
+  review. The agent does not retry HTTP 429 responses.
 - CAPTCHA and login/OTP challenges are never bypassed. Complete them manually in
   the visible browser; the agent waits for the form to become available.
 - A submission is marked **Submitted** only after a confirmation signal is
@@ -188,11 +202,12 @@ Backend health: <http://127.0.0.1:8000/api/health>
 - Uploading a cover letter extracts its text into the cover letter field. The file
   itself is also used when a Greenhouse form requires a cover-letter upload.
 - Saved answers are matched by question text. Sensitive questions require an
-  explicit saved answer or, for work authorization, an explicit work
-  authorization profile value; AI is not allowed to answer them. Education
+  explicit saved answer or, for work authorization and sponsorship, an explicit
+  work-authorization profile value; AI is not allowed to answer them. Education
   fields such as school, degree, major, GPA, and dates are filled from a
-  uniquely saved education record, with AI mapping available for other grounded
-  fields when enabled.
+  uniquely saved education record. Degree and school options use equivalent
+  matching when the exact value is not listed. AI mapping remains available for
+  other grounded fields when enabled.
 - Keep your profile and resume accurate. The agent is designed to pause rather
   than invent personal facts.
 
@@ -267,7 +282,7 @@ $env:AI_ENABLED="false"
 In another terminal, run:
 
 ```powershell
-backend\venv\Scripts\python.exe -m unittest tests.test_ai_mapper -v
+backend\venv\Scripts\python.exe -m unittest tests.test_ai_mapper tests.test_smart_matching -v
 backend\venv\Scripts\python.exe tests\test_phase3_api.py
 backend\venv\Scripts\python.exe tests\test_submission_api.py
 backend\venv\Scripts\python.exe tests\test_phase6_api.py
@@ -344,11 +359,28 @@ cd backend
   `CAPTCHA_WAIT_SECONDS`.
 - The agent will not solve or bypass challenges for you.
 
+**Form fills and then resets**
+- This was caused by filling before the React app finished hydrating. The runner
+  now waits for network idle and a short settle period before filling.
+- If it still happens, check the browser console for a page error and retry.
+- Do not add profile values just to work around a resetting field; required
+  unmatched fields should appear as review items.
+
+**School, degree, or discipline stays at Needs Review**
+- Make sure the education record has a school, degree, and field of study.
+- The matcher uses equivalent options (`B.Tech` → `Bachelor's Degree`, unknown
+  school → `Other`). If the form uses unusual option text, add an explicit saved
+  answer for that question.
+- Optional education fields that cannot be matched are skipped and do not block
+  submission.
+
 **AI is not used**
 - Check `AI_ENABLED=true`, `AI_PROVIDER=gemini`, and a non-empty
   `GEMINI_API_KEY`.
 - Review the logs for `AI error` / quota / timeout messages.
-- AI is optional; deterministic filling and review items still work.
+- A Gemini 429/quota error stops further AI calls for that run. Deterministic
+  filling and review items still work; add explicit saved answers for the
+  remaining fields.
 
 **AI output is shown instead of filled**
 - This is expected for generated prose. Review the suggestion, then edit it in
@@ -376,5 +408,7 @@ cd backend
 - Incremental resume at the exact paused field is not implemented. The agent
   safely reloads and refills using the profile plus stored review resolutions.
 - Generated AI prose requires review unless explicitly enabled otherwise.
+- Optional fields that cannot be matched are left blank instead of blocking the
+  run. Add an explicit saved answer if you want them filled.
 - A real employer submission still requires your real profile/resume, a job you
   actually want, and explicit approval after a fill-only review.

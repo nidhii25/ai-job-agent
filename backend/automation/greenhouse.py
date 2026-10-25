@@ -3,6 +3,7 @@
 import os
 import re
 from dataclasses import dataclass, field
+from datetime import date
 
 from playwright.sync_api import Error as PlaywrightError
 
@@ -123,6 +124,33 @@ class FillResult:
 
 def normalize(value):
     return re.sub(r"[^a-z0-9]+", " ", (value or "").lower()).strip()
+
+
+def _contains_word(text, *terms):
+    """Match whole words/phrases, never fragments such as city in ethnicity."""
+    for term in terms:
+        if re.search(rf"\b{re.escape(term)}\b", text or ""):
+            return True
+    return False
+
+
+def _control_text(control, keys=("label", "question", "name", "id")):
+    return normalize(
+        " ".join(str(control.get(key) or "") for key in keys)
+    )
+
+
+def _control_label(control):
+    """Use only the visible label for short factual fields.
+
+    Long legal/policy paragraphs often contain words such as "state" or "city"
+    incidentally. Derivation must never treat those paragraphs as short fields.
+    """
+    label = normalize(control.get("label") or "")
+    if label:
+        return label
+    question = normalize(control.get("question") or "")
+    return question if len(question) <= 120 else ""
 
 
 def has_greenhouse_form(page):
@@ -500,12 +528,375 @@ def _profile_value(profile, key):
     return ""
 
 
+def get_degree_level(degree_name):
+    """Normalize a degree string into a standard education level."""
+    d = normalize(str(degree_name or ""))
+    if not d:
+        return ""
+    if any(
+        term in d
+        for term in (
+            "b tech", "btech", "b e", "be", "b s", "bs", "bsc", "b sc",
+            "b a", "ba", "bca", "b bachelor", "bachelor", "bachelors",
+            "undergraduate", "four year", "4 year", "four year degree",
+            "4 year degree", "bachelor of technology", "bachelor of engineering",
+            "bachelor of science", "bachelor of arts",
+        )
+    ):
+        return "bachelor"
+    if any(
+        term in d
+        for term in (
+            "m tech", "mtech", "m e", "me", "m s", "ms", "msc", "m sc",
+            "m a", "ma", "mca", "mba", "master", "masters", "postgraduate",
+            "graduate degree", "master of technology", "master of engineering",
+            "master of science", "master of business",
+        )
+    ):
+        return "master"
+    if any(
+        term in d
+        for term in (
+            "phd", "ph d", "doctorate", "doctoral", "doctor of philosophy"
+        )
+    ):
+        return "doctorate"
+    if any(
+        term in d
+        for term in ("associate", "associates", "2 year", "two year")
+    ):
+        return "associate"
+    if any(
+        term in d
+        for term in ("high school", "secondary", "ged", "12th", "diploma")
+    ):
+        return "high_school"
+    return "other"
+
+
+def is_degree_control(control):
+    text = normalize(
+        " ".join(
+            str(control.get(key) or "")
+            for key in ("label", "question", "name", "id")
+        )
+    )
+    return any(
+        term in text
+        for term in (
+            "degree",
+            "qualification",
+            "education level",
+            "highest education",
+            "level of education",
+            "highest degree",
+        )
+    ) and not any(
+        term in text
+        for term in ("field of study", "major", "school", "institution", "university", "college")
+    )
+
+
+def is_school_control(control):
+    text = normalize(
+        " ".join(
+            str(control.get(key) or "")
+            for key in ("label", "question", "name", "id")
+        )
+    )
+    return any(
+        term in text
+        for term in (
+            "school",
+            "university",
+            "college",
+            "institution",
+            "alma mater",
+            "institute",
+        )
+    ) and not any(
+        term in text
+        for term in ("high school", "law school", "medical school", "field of study", "degree", "major")
+    )
+
+
+def is_discipline_control(control):
+    text = _control_text(control)
+    return any(
+        term in text
+        for term in (
+            "discipline",
+            "field of study",
+            "area of study",
+            "major",
+            "concentration",
+        )
+    ) and not any(
+        term in text
+        for term in (
+            "degree",
+            "school",
+            "university",
+            "college",
+            "institution",
+            "gpa",
+            "graduation",
+        )
+    )
+
+
+def find_best_text_option(candidate, options):
+    """Match a free-text profile fact to an option by exact or contained text."""
+    if not candidate or not options:
+        return None
+    candidate = str(candidate).strip()
+    for option in options:
+        text = str(
+            option.get("text") or option.get("value") or ""
+            if isinstance(option, dict)
+            else option
+        ).strip()
+        if _option_matches(text, candidate):
+            return option
+    return None
+
+
+def find_best_degree_option(candidate_degree, options):
+    """Match candidate degree to available options, equivalent levels, or 'Other'."""
+    if not candidate_degree or not options:
+        return None
+
+    def opt_info(o):
+        text = str(
+            o.get("text") or o.get("value") or "" if isinstance(o, dict) else o
+        ).strip()
+        return text, normalize(text)
+
+    # 1. Direct match
+    for opt in options:
+        text, _ = opt_info(opt)
+        if _option_matches(text, candidate_degree):
+            return opt
+
+    level = get_degree_level(candidate_degree)
+
+    if level == "bachelor":
+        specific_tech = (
+            "bachelor of technology",
+            "bachelor of engineering",
+            "bachelor of science",
+            "b tech",
+            "b e",
+            "b s",
+            "bs",
+            "bsc",
+            "b eng",
+        )
+        for opt in options:
+            _, norm = opt_info(opt)
+            if any(term == norm or norm.startswith(term + " ") for term in specific_tech):
+                return opt
+
+        generic_bachelor = (
+            "bachelor s degree",
+            "bachelor s",
+            "bachelors degree",
+            "bachelors",
+            "bachelor",
+            "undergraduate degree",
+            "undergraduate",
+            "four year degree",
+            "4 year degree",
+            "college degree",
+            "four year college",
+        )
+        for opt in options:
+            _, norm = opt_info(opt)
+            if any(
+                term == norm or norm.startswith(term + " ") or term in norm
+                for term in generic_bachelor
+            ):
+                return opt
+
+    elif level == "master":
+        specific_master = (
+            "master of technology",
+            "master of engineering",
+            "master of science",
+            "m tech",
+            "m e",
+            "m s",
+            "ms",
+            "msc",
+            "mca",
+            "mba",
+        )
+        for opt in options:
+            _, norm = opt_info(opt)
+            if any(term == norm or norm.startswith(term + " ") for term in specific_master):
+                return opt
+
+        generic_master = (
+            "master s degree",
+            "master s",
+            "masters degree",
+            "masters",
+            "master",
+            "graduate degree",
+            "postgraduate",
+        )
+        for opt in options:
+            _, norm = opt_info(opt)
+            if any(
+                term == norm or norm.startswith(term + " ") or term in norm
+                for term in generic_master
+            ):
+                return opt
+
+    elif level == "doctorate":
+        doc_patterns = ("doctorate", "ph d", "phd", "doctoral", "doctor of philosophy")
+        for opt in options:
+            _, norm = opt_info(opt)
+            if any(term in norm for term in doc_patterns):
+                return opt
+
+    elif level == "associate":
+        assoc_patterns = ("associate", "associate s", "associates", "2 year", "two year")
+        for opt in options:
+            _, norm = opt_info(opt)
+            if any(term in norm for term in assoc_patterns):
+                return opt
+
+    # 4. Fallback: 'Other' / 'Not Listed'
+    other_patterns = (
+        "other",
+        "other degree",
+        "not listed",
+        "degree not listed",
+        "unlisted",
+        "none of the above",
+    )
+    for opt in options:
+        _, norm = opt_info(opt)
+        if norm in other_patterns or norm.startswith("other ") or norm == "other":
+            return opt
+
+    return None
+
+
+def find_best_school_option(candidate_school, options):
+    """Match candidate school to available options, stripped name, or 'Other'."""
+    if not candidate_school or not options:
+        return None
+
+    def opt_info(o):
+        text = str(
+            o.get("text") or o.get("value") or "" if isinstance(o, dict) else o
+        ).strip()
+        return text, normalize(text)
+
+    # 1. Exact or direct match
+    for opt in options:
+        text, _ = opt_info(opt)
+        if _option_matches(text, candidate_school):
+            return opt
+
+    # 2. Try school name without location/city suffix (e.g. without ", Indore")
+    parts = re.split(r"[,–—|-]", candidate_school)
+    if len(parts) > 1:
+        core_name = parts[0].strip()
+        if len(core_name) >= 4:
+            for opt in options:
+                text, _ = opt_info(opt)
+                if _option_matches(text, core_name):
+                    return opt
+
+    # 3. Fallback to 'Other' / 'Not Listed' option
+    other_patterns = (
+        "other",
+        "other not listed",
+        "not listed",
+        "school not listed",
+        "college not listed",
+        "university not listed",
+        "institution not listed",
+        "unlisted",
+        "i do not see my school",
+        "not in list",
+        "other institution",
+        "other school",
+        "other university",
+        "other college",
+        "none of the above",
+    )
+    for opt in options:
+        _, norm = opt_info(opt)
+        if norm in other_patterns:
+            return opt
+
+    for opt in options:
+        _, norm = opt_info(opt)
+        if (
+            norm.startswith("other ")
+            or norm.startswith("other/")
+            or "not listed" in norm
+            or norm == "other"
+        ):
+            return opt
+
+    return None
+
+
+def find_other_school_option(options):
+    """Locate an 'Other' / 'Not Listed' option in a list of options."""
+    for option in options or []:
+        opt_text = str(
+            option.get("text") or option.get("value") or ""
+            if isinstance(option, dict)
+            else option
+        )
+        norm = normalize(opt_text)
+        if norm in (
+            "other",
+            "other not listed",
+            "not listed",
+            "school not listed",
+            "college not listed",
+            "university not listed",
+            "institution not listed",
+            "unlisted",
+            "i do not see my school",
+            "not in list",
+            "other institution",
+            "other school",
+            "other university",
+            "other college",
+            "none of the above",
+        ):
+            return option
+    for option in options or []:
+        opt_text = str(
+            option.get("text") or option.get("value") or ""
+            if isinstance(option, dict)
+            else option
+        )
+        norm = normalize(opt_text)
+        if (
+            norm.startswith("other ")
+            or norm.startswith("other/")
+            or "not listed" in norm
+            or norm == "other"
+        ):
+            return option
+    return None
+
+
 def _education_value(profile, control):
     """Return an explicitly saved education fact for a clearly labeled field."""
     education = [
         item for item in (profile.get("education") or []) if isinstance(item, dict)
     ]
-    if len(education) != 1:
+    if not education:
         return ""
 
     item = education[0]
@@ -531,6 +922,29 @@ def _education_value(profile, control):
         start_date = date_range[0].strip()
     if not end_date and len(date_range) == 2:
         end_date = date_range[1].strip()
+
+    end_text = f"{end_date} {date_range[1] if len(date_range) == 2 else dates}".strip()
+
+    if any(
+        term in question
+        for term in ("graduation year", "year of graduation", "grad year", "degree year")
+    ):
+        years = re.findall(r"\b(20\d{2})\b", end_text or dates)
+        if years:
+            return years[-1]
+
+    if any(
+        term in question
+        for term in ("graduation month", "month of graduation", "grad month")
+    ):
+        months = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        target = end_text.lower()
+        for m in months:
+            if m.lower() in target or m[:3].lower() in target:
+                return m
 
     if any(term in question for term in ("graduation", "expected to graduate")):
         return end_date
@@ -580,24 +994,90 @@ def _education_value(profile, control):
         for key in aliases[field_name]:
             value = item.get(key)
             if value:
-                return str(value).strip()
+                raw_val = str(value).strip()
+                options = control.get("options") or []
+                if options:
+                    if field_name == "degree":
+                        matched = find_best_degree_option(raw_val, options)
+                        if matched:
+                            return str(
+                                matched.get("text") or matched.get("value") or ""
+                                if isinstance(matched, dict)
+                                else matched
+                            )
+                    elif field_name == "institution":
+                        matched = find_best_school_option(raw_val, options)
+                        if matched:
+                            return str(
+                                matched.get("text") or matched.get("value") or ""
+                                if isinstance(matched, dict)
+                                else matched
+                            )
+                    elif field_name == "field_of_study":
+                        matched = find_best_text_option(raw_val, options)
+                        if matched:
+                            return str(
+                                matched.get("text") or matched.get("value") or ""
+                                if isinstance(matched, dict)
+                                else matched
+                            )
+                return raw_val
         return ""
 
     return ""
 
 
 def _work_authorization_answer(profile, control):
-    """Map only an explicit work-authorization profile fact to a form answer."""
-    question = normalize(
-        " ".join(
-            str(control.get(key) or "")
-            for key in ("label", "question", "name", "id")
-        )
-    )
-    if not question or any(term in question for term in ("citizen", "citizenship")):
+    """Map only explicitly stated work-authorization facts.
+
+    Country, location, education, and other profile facts are never used to
+    infer eligibility. Citizenship, security clearance, legal attestations,
+    and demographic questions always require an explicit saved answer.
+    """
+    text = _control_text(control)
+    if not text:
         return ""
-    if not any(
-        term in question
+
+    # These must never be answered from the free-text work-authorization field.
+    if _contains_word(
+        text,
+        "citizen",
+        "citizenship",
+        "permanent resident",
+        "green card",
+        "lawful permanent",
+        "security clearance",
+        "clearance",
+        "affirmation",
+        "acknowledgement",
+        "acknowledgment",
+        "arbitration",
+        "at will",
+        "consent",
+        "signature",
+        "certify",
+        "attest",
+        "background check",
+        "criminal",
+        "drug test",
+        "date of birth",
+        "gender",
+        "race",
+        "ethnicity",
+        "veteran",
+        "disability",
+        "sexual orientation",
+        "home address",
+        "mailing address",
+        "street address",
+    ):
+        return ""
+
+    is_sponsorship_q = "sponsorship" in text or (
+        "visa" in text and "sponsor" in text
+    )
+    is_auth_q = any(
+        term in text
         for term in (
             "authorized to work",
             "authorised to work",
@@ -610,14 +1090,19 @@ def _work_authorization_answer(profile, control):
             "work authorisation",
             "work permit",
             "eligible to work",
-            "sponsorship",
+            "legally eligible",
+            "legally authorized",
+            "legally authorised",
         )
-    ):
+    )
+    if not (is_sponsorship_q or is_auth_q):
         return ""
 
     fact = str(profile.get("work_authorization") or "").strip()
     if not fact:
         return ""
+
+    fact_text = normalize(fact)
     options = control.get("options") or []
     option_texts = [
         str(option.get("text") or option.get("value") or "")
@@ -625,79 +1110,276 @@ def _work_authorization_answer(profile, control):
         else str(option)
         for option in options
     ]
-    for option in option_texts:
-        if _option_matches(option, fact):
-            return option
 
-    fact_text = normalize(fact)
-    is_sponsorship_question = "sponsorship" in question
-    if is_sponsorship_question:
-        if any(
-            phrase in fact_text
-            for phrase in (
-                "require sponsorship",
-                "requires sponsorship",
-                "need sponsorship",
-                "needs sponsorship",
-                "sponsorship required",
-            )
-        ):
-            answer = "yes"
-        elif any(
-            phrase in fact_text
-            for phrase in (
-                "without sponsorship",
-                "no sponsorship",
-                "do not require sponsorship",
-                "does not require sponsorship",
-            )
-        ):
-            answer = "no"
-        else:
-            answer = ""
-    elif fact_text in ("yes", "y", "true"):
+    us_context = (
+        "united states" in text
+        or bool(re.search(r"\bu s\b", text))
+        or _contains_word(text, "usa")
+        or bool(re.search(r"\bin the us\b", text))
+    )
+    india_context = _contains_word(text, "india")
+
+    answer = ""
+    if fact_text in ("yes", "y", "true"):
         answer = "yes"
     elif fact_text in ("no", "n", "false"):
         answer = "no"
-    elif any(
-        phrase in fact_text
-        for phrase in (
-            "not authorized",
-            "not authorised",
-            "not eligible",
-            "not licensed to work",
-            "not licenced to work",
-            "no work permit",
-            "no work license",
-            "no work licence",
-            "do not have a license to work",
-            "do not have a licence to work",
-            "do not hold a work permit",
+    elif is_sponsorship_q:
+        requires_phrases = (
+            "require sponsorship",
+            "requires sponsorship",
+            "need sponsorship",
+            "needs sponsorship",
+            "sponsorship required",
+            "will require sponsorship",
+            "requires visa sponsorship",
         )
-    ):
-        answer = "no"
-    elif any(
-        phrase in fact_text
-        for phrase in (
-            "authorized to work",
-            "authorised to work",
-            "eligible to work",
-            "licensed to work",
-            "licenced to work",
-            "license to work",
-            "licence to work",
-            "have a work permit",
-            "hold a work permit",
+        no_sponsorship_phrases = (
+            "do not require sponsorship",
+            "does not require sponsorship",
+            "not require sponsorship",
+            "no sponsorship",
+            "no visa sponsorship",
+            "without sponsorship",
         )
-    ):
-        answer = "yes"
-    else:
-        answer = ""
+        requires = any(phrase in fact_text for phrase in requires_phrases)
+        no_sponsorship = any(phrase in fact_text for phrase in no_sponsorship_phrases)
+        if us_context:
+            if no_sponsorship and not requires:
+                answer = "no"
+            elif requires:
+                answer = "yes"
+        elif india_context:
+            if "outside india" in fact_text:
+                answer = "no"
+            elif requires and "in india" in fact_text:
+                answer = "yes"
+            elif no_sponsorship:
+                answer = "no"
+        elif requires and not no_sponsorship:
+            answer = "yes"
+        elif no_sponsorship and not requires:
+            answer = "no"
+    elif is_auth_q:
+        not_authorized_phrases = (
+            "not authorized to work in the us",
+            "not authorised to work in the us",
+            "not authorized to work in the usa",
+            "not authorised to work in the usa",
+            "not authorized to work in the united states",
+            "not authorised to work in the united states",
+        )
+        authorized_us_phrases = (
+            "authorized to work in the us",
+            "authorised to work in the us",
+            "authorized to work in the usa",
+            "authorised to work in the usa",
+            "authorized to work in the united states",
+            "authorised to work in the united states",
+            "license to work in the united states",
+            "licence to work in the united states",
+            "license to work in the us",
+            "licence to work in the us",
+        )
+        not_authorized_india_phrases = (
+            "not authorized to work in india",
+            "not authorised to work in india",
+        )
+        authorized_india_phrases = (
+            "authorized to work in india",
+            "authorised to work in india",
+            "eligible to work in india",
+            "license to work in india",
+            "licence to work in india",
+        )
+        generic_not_authorized = any(
+            phrase in fact_text
+            for phrase in (
+                "not authorized",
+                "not authorised",
+                "not eligible to work",
+                "not licensed to work",
+                "not licenced to work",
+                "no work permit",
+                "no work license",
+                "no work licence",
+            )
+        )
+        generic_authorized = any(
+            phrase in fact_text
+            for phrase in (
+                "authorized to work",
+                "authorised to work",
+                "eligible to work",
+                "licensed to work",
+                "licenced to work",
+                "have a work permit",
+                "hold a work permit",
+            )
+        )
+        if us_context:
+            if any(phrase in fact_text for phrase in not_authorized_phrases):
+                answer = "no"
+            elif requires_us_sponsorship(fact_text):
+                answer = "no"
+            elif any(phrase in fact_text for phrase in authorized_us_phrases):
+                answer = "yes"
+        elif india_context:
+            if any(phrase in fact_text for phrase in not_authorized_india_phrases):
+                answer = "no"
+            elif any(phrase in fact_text for phrase in authorized_india_phrases):
+                answer = "yes"
+        elif generic_not_authorized and not generic_authorized:
+            answer = "no"
+        elif generic_authorized and not generic_not_authorized:
+            answer = "yes"
+
+    if not answer:
+        return ""
 
     for option in option_texts:
         if _option_matches(option, answer):
             return option
+
     return answer if not option_texts else ""
+
+
+def requires_us_sponsorship(fact_text):
+    """Return True only when the explicit statement requires U.S. sponsorship."""
+    if "united states" not in fact_text and not re.search(r"\bin the us\b", fact_text):
+        return False
+    return any(
+        phrase in fact_text
+        for phrase in (
+            "require sponsorship",
+            "requires sponsorship",
+            "need sponsorship",
+            "needs sponsorship",
+            "sponsorship required",
+            "will require sponsorship",
+            "requires visa sponsorship",
+        )
+    )
+
+
+def _find_derived_answer(profile, control):
+    """Derive safe answers from short, clearly identified factual fields.
+
+    Only the visible label (or a short question) is inspected. Long legal or
+    policy paragraphs are ignored so words such as "state", "city", or
+    "citizen" inside them cannot be mistaken for a field label.
+    """
+    label = _control_label(control)
+    if not label:
+        return ""
+
+    personal = profile.get("personal") or {}
+    education = [
+        item for item in (profile.get("education") or []) if isinstance(item, dict)
+    ]
+    primary_edu = education[0] if education else {}
+    dates = str(primary_edu.get("dates") or "").strip()
+    date_parts = re.split(r"\s+(?:-|–|—|to)\s+", dates, maxsplit=1, flags=re.I)
+    end_date = str(
+        primary_edu.get("end_date")
+        or primary_edu.get("graduation_date")
+        or primary_edu.get("expected_graduation_date")
+        or (date_parts[1] if len(date_parts) == 2 else "")
+        or ""
+    ).strip()
+    end_text = f"{end_date} {date_parts[1] if len(date_parts) == 2 else dates}".strip()
+
+    # 1. Graduation year
+    if _contains_word(
+        label,
+        "graduation year",
+        "year of graduation",
+        "degree year",
+        "grad year",
+        "completion year",
+    ):
+        years = re.findall(r"\b(20\d{2})\b", end_text or dates)
+        if years:
+            return years[-1]
+
+    # 2. Graduation month
+    if _contains_word(
+        label,
+        "graduation month",
+        "month of graduation",
+        "grad month",
+    ):
+        months = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        target = end_text.lower()
+        for month in months:
+            if month.lower() in target or month[:3].lower() in target:
+                return month
+
+    # 3. Start year
+    if _contains_word(label, "start year", "enrollment year", "from year"):
+        start_date = str(primary_edu.get("start_date") or "").strip()
+        match = re.search(r"\b(20\d{2})\b", start_date or dates)
+        if match:
+            return match.group(1)
+
+    # 4. Current student status, derived only from an explicit education end date.
+    if _contains_word(
+        label,
+        "currently enrolled",
+        "current student",
+        "currently attending",
+        "pursuing a degree",
+        "are you a student",
+        "enrolled in a degree",
+    ):
+        match = re.search(r"\b(20\d{2})\b", end_text)
+        if match:
+            return "Yes" if int(match.group(1)) >= date.today().year else "No"
+        return ""
+
+    # 5. State / Province. Only a short label or a name/id may trigger this.
+    short_label = label if len(label) <= 60 else ""
+    identity = f"{short_label} {_control_text(control, keys=('name', 'id'))}".strip()
+    if _contains_word(identity, "state", "province") and not _contains_word(
+        identity, "statement", "status", "united states"
+    ):
+        parts = [part.strip() for part in (personal.get("location") or "").split(",") if part.strip()]
+        if len(parts) >= 2:
+            return parts[1]
+        if len(parts) == 1:
+            return parts[0]
+
+    # 6. City / town, using whole words so "ethnicity" never matches "city".
+    if _contains_word(identity, "city", "town"):
+        parts = [part.strip() for part in (personal.get("location") or "").split(",") if part.strip()]
+        if parts:
+            return parts[0]
+
+    # 7. Degree level / Highest level of education
+    if _contains_word(
+        label,
+        "highest level of education",
+        "highest education",
+        "education level",
+        "degree level",
+    ):
+        degree = primary_edu.get("degree") or ""
+        level = get_degree_level(degree)
+        if level == "bachelor":
+            return "Bachelor's Degree"
+        if level == "master":
+            return "Master's Degree"
+        if level == "doctorate":
+            return "Doctorate"
+        if level == "associate":
+            return "Associate's Degree"
+        if level == "high_school":
+            return "High School Diploma"
+
+    return ""
 
 
 def _find_answer_in(mapping, *texts):
@@ -752,12 +1434,85 @@ def _fill_text(page, control, value):
 
 def _fill_native_select(page, control, answer):
     locator = page.locator(f'[data-agent-key="{control["key"]}"]')
-    for option in control.get("options", []):
+    options = control.get("options", [])
+
+    # 1. Direct match
+    for option in options:
         if _option_matches(option.get("text", ""), answer) or _option_matches(
             option.get("value", ""), answer
         ):
             locator.select_option(value=option["value"])
             return True
+
+    # 2. Equivalent degree options
+    if is_degree_control(control):
+        best = find_best_degree_option(answer, options)
+        if best:
+            locator.select_option(value=best["value"])
+            return True
+
+    # 3. School options, including "Other / Not Listed"
+    if is_school_control(control):
+        best = find_best_school_option(answer, options)
+        if best:
+            locator.select_option(value=best["value"])
+            return True
+
+    # 4. Field-of-study / discipline option matching
+    if is_discipline_control(control):
+        best = find_best_text_option(answer, options)
+        if best:
+            locator.select_option(value=best["value"])
+            return True
+
+    return False
+
+
+def _visible_options(page):
+    return page.locator('[role="option"]:visible')
+
+
+def _wait_for_options(page, timeout_ms=2000):
+    """Wait for a React-select option list instead of assuming a fixed delay."""
+    elapsed = 0
+    step = 100
+    while elapsed <= timeout_ms:
+        options = _visible_options(page)
+        if options.count() > 0:
+            return options
+        page.wait_for_timeout(step)
+        elapsed += step
+    return _visible_options(page)
+
+
+def _click_matching_option(options, query):
+    """Click the best visible option for a query; never pick an unrelated one."""
+    wanted = normalize(query)
+    if not wanted:
+        return False
+
+    candidates = []
+    for index in range(options.count()):
+        try:
+            text = options.nth(index).inner_text().strip()
+        except PlaywrightError:
+            continue
+        if text:
+            candidates.append((index, normalize(text)))
+
+    predicates = (
+        lambda option: option == wanted,
+        lambda option: option.startswith(wanted + " "),
+        lambda option: f" {wanted} " in f" {option} ",
+    )
+    for predicate in predicates:
+        for index, option_text in candidates:
+            if predicate(option_text):
+                try:
+                    options.nth(index).click()
+                    return True
+                except PlaywrightError:
+                    continue
     return False
 
 
@@ -771,29 +1526,58 @@ def _fill_combobox(page, control, answer):
         except PlaywrightError:
             # Some combobox inputs are read-only; type instead of fill.
             page.keyboard.type(str(answer))
-        page.wait_for_timeout(400)
 
-        options = page.locator('[role="option"]:visible')
-        count = options.count()
-        wanted = normalize(answer)
-        candidates = []
-        for index in range(count):
-            text = options.nth(index).inner_text().strip()
-            candidates.append((index, normalize(text)))
+        options = _wait_for_options(page)
+        if _click_matching_option(options, answer):
+            page.wait_for_timeout(150)
+            return True
 
-        # Prefer exact, then word-prefix, then whole-word containment. Never
-        # select an unrelated first option when nothing matches.
-        predicates = (
-            lambda option: option == wanted,
-            lambda option: option.startswith(wanted + " "),
-            lambda option: f" {wanted} " in f" {option} ",
-        )
-        for predicate in predicates:
-            for index, option_text in candidates:
-                if wanted and predicate(option_text):
-                    options.nth(index).click()
-                    page.wait_for_timeout(200)
+        fallback_queries = []
+        if is_degree_control(control):
+            level = get_degree_level(answer)
+            if level == "bachelor":
+                fallback_queries = [
+                    "Bachelor's Degree", "Bachelor's", "Bachelors",
+                    "Bachelor of Engineering", "Bachelor of Science",
+                    "Undergraduate", "Other",
+                ]
+            elif level == "master":
+                fallback_queries = [
+                    "Master's Degree", "Master's", "Masters",
+                    "Master of Technology", "Master of Science", "Other",
+                ]
+            else:
+                fallback_queries = ["Other"]
+        elif is_school_control(control):
+            parts = re.split(r"[,–—|-]", str(answer))
+            if len(parts) > 1 and len(parts[0].strip()) >= 4:
+                fallback_queries.append(parts[0].strip())
+            fallback_queries.extend(["Other", "Not Listed", "Other / Not Listed"])
+        elif is_discipline_control(control):
+            parts = re.split(r"[,/]| and ", str(answer))
+            fallback_queries.extend(
+                part.strip()
+                for part in parts
+                if part.strip() and part.strip() != str(answer).strip()
+            )
+
+        for query in fallback_queries:
+            if normalize(query) == normalize(answer):
+                continue
+            try:
+                locator.click()
+                try:
+                    locator.fill("")
+                    locator.fill(query)
+                except PlaywrightError:
+                    page.keyboard.press("Control+A")
+                    page.keyboard.type(query)
+                options = _wait_for_options(page)
+                if _click_matching_option(options, query):
+                    page.wait_for_timeout(150)
                     return True
+            except PlaywrightError:
+                continue
 
         page.keyboard.press("Escape")
         return False
@@ -992,6 +1776,8 @@ def fill_application(page, profile, resolved_answers=None, ai_mapper=None):
             if not answer:
                 answer = _work_authorization_answer(profile, control)
             if not answer:
+                answer = _find_derived_answer(profile, control)
+            if not answer:
                 if control.get("required"):
                     answer, ai_source = ai_fill_or_review(
                         control,
@@ -1007,7 +1793,7 @@ def fill_application(page, profile, resolved_answers=None, ai_mapper=None):
             if tag == "select":
                 if _fill_native_select(page, control, answer):
                     note_fill(_label_for(control), answer, ai_source)
-                else:
+                elif control.get("required"):
                     review(
                         control,
                         "Saved answer does not match any available option.",
@@ -1017,7 +1803,7 @@ def fill_application(page, profile, resolved_answers=None, ai_mapper=None):
             elif is_combobox:
                 if _fill_combobox(page, control, answer):
                     note_fill(_label_for(control), answer, ai_source)
-                else:
+                elif control.get("required"):
                     review(
                         control,
                         "Could not select the saved answer in the dropdown.",
@@ -1028,12 +1814,13 @@ def fill_application(page, profile, resolved_answers=None, ai_mapper=None):
                 _fill_text(page, control, answer)
                 note_fill(_label_for(control), answer, ai_source)
         except PlaywrightError:
-            review(
-                control,
-                "The field could not be filled automatically.",
-                suggested_value=ai_source.value if ai_source else None,
-                source="ai" if ai_source else "deterministic",
-            )
+            if control.get("required"):
+                review(
+                    control,
+                    "The field could not be filled automatically.",
+                    suggested_value=ai_source.value if ai_source else None,
+                    source="ai" if ai_source else "deterministic",
+                )
 
     for name, group in radio_groups.items():
         question = group["question"] or name
@@ -1054,6 +1841,8 @@ def fill_application(page, profile, resolved_answers=None, ai_mapper=None):
                 ],
             }
             answer = _work_authorization_answer(profile, group_control)
+            if not answer:
+                answer = _find_derived_answer(profile, group_control)
         option_texts = [option["text"] for option in group["options"] if option["text"]]
         ai_source = None
         all_radio = all(
@@ -1115,7 +1904,7 @@ def fill_application(page, profile, resolved_answers=None, ai_mapper=None):
                     pass
                 break
 
-        if not matched:
+        if not matched and group["required"]:
             add_review(
                 question,
                 "Saved answer does not match any available option ("

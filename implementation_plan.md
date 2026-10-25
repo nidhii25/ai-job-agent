@@ -243,9 +243,13 @@ Details and limitations are recorded in `phase_3_log.md`.
 - [x] If confidence insufficient or information absent → create review item
 - [x] Structured validation logic for all AI responses
   - Sensitive/eligibility fields are never sent to AI.
+  - Legal attestations, security clearance, citizenship, and home/mailing address
+    are treated as sensitive too.
   - Option fields require an option match.
-  - Direct-fact answers must be traceable to the profile or saved answers.
+  - Direct-fact answers must be traceable to the profile or saved answers. The
+    prompt receives no hardcoded derived eligibility facts.
   - Provider errors and timeouts fall back to deterministic review handling.
+  - HTTP 429/quota errors stop further AI calls for that run.
 
 ### Task 4.5: Review Item Creation
 - [x] Save review items when required field cannot be answered safely
@@ -405,6 +409,54 @@ review. No fake data has been submitted to a real employer.
 
 ---
 
+## Phase 7: Smart Matching and Safety Hardening
+
+Completed 2026-10-25. See [`phase_7_smart_matching_log.md`](phase_7_smart_matching_log.md).
+
+- [x] Remove eligibility inference from country/location and make work
+      authorization/sponsorship explicit-only.
+- [x] Always require an explicit saved answer for citizenship, security
+      clearance, legal attestations, demographic questions, and home/mailing
+      address.
+- [x] Replace substring-based derivation with whole-word, short-label matching so
+      "state" in a legal paragraph and "city" in "ethnicity" cannot match.
+- [x] Derive student status from explicit education dates instead of returning a
+      hardcoded "Yes".
+- [x] Remove invented notice-period, relocation, and internship answers.
+- [x] Remove hardcoded AI `derived_facts` and revert the AI prompt to explicit
+      facts only.
+- [x] Block legal/attestation/address fields before AI and stop retrying HTTP 429
+      quota errors.
+- [x] Add a per-run AI quota circuit breaker.
+- [x] Wait for network idle and hydration before filling.
+- [x] Poll for delayed React-select options instead of using a fixed 400 ms wait.
+- [x] Match school/degree/discipline options, including `Other` for an unlisted
+      school and `Bachelor's Degree` for `B.Tech`.
+- [x] Do not create review items for optional fields that cannot be matched.
+- [x] Verify live fill-only education selections and explicit eligibility
+      behavior.
+- [x] Add `tests/test_smart_matching.py` and update the README and phase logs.
+
+### Phase 7 Verification
+
+- ✅ `tests/test_ai_mapper.py`: 21 tests passed
+- ✅ `tests/test_smart_matching.py`: 44 tests passed
+- ✅ `tests/test_phase3_api.py`: 33 checks passed
+- ✅ `tests/test_submission_api.py`: 51 checks passed
+- ✅ `tests/test_phase6_api.py`: 48 checks passed
+- ✅ `tests/test_fill_only_api.py`: 11 checks passed
+- ✅ `tests/test_resume_parser.py`: 10 tests passed
+- ✅ `tests/e2e_phase2.py`: 7 UI checks passed
+- ✅ `npm run lint` and `npm run build` pass
+- ✅ Live GRVTY fill-only run selected School → Other, Degree → Bachelor's
+  Degree, and Discipline → Computer Science
+- ✅ Live GRVTY run filled only the explicit U.S. eligibility answers and left
+  security clearance, citizenship, legal acknowledgements, salary, and address
+  for review
+- ✅ No Submit click in the live fill-only run
+
+---
+
 ## Acceptance Criteria Checklist
 
 - [x] 1. Application runs locally with frontend and backend
@@ -426,6 +478,10 @@ review. No fake data has been submitted to a real employer.
   - AI direct-fact answers must be traceable to the profile/saved answers.
   - AI-generated prose becomes a review suggestion by default.
   - Sensitive/eligibility fields are never answered by AI.
+  - Work authorization and sponsorship are explicit-only; country/location are
+    never used to infer them.
+  - Citizenship, security clearance, legal attestations, demographics, and
+    home/mailing addresses require an explicit saved answer.
   - An uncertain submission blocks automatic resubmission until the user verifies it.
 
 ---

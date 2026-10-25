@@ -57,7 +57,19 @@ SENSITIVE_PATTERNS = (
     r"\bbackground check\b",
     r"\bcriminal\b",
     r"\bsecurity clearance\b",
+    r"\bexport control\b",
     r"\bdrug test\b",
+    r"\baffirmation\b",
+    r"\backnowledg(?:e)?ment\b",
+    r"\bat[- ]will\b",
+    r"\barbitration\b",
+    r"\bconsent\b",
+    r"\bsignature\b",
+    r"\bcertif(?:y|ication)\b",
+    r"\battest(?:ation)?\b",
+    r"\bhome address\b",
+    r"\bmailing address\b",
+    r"\bstreet address\b",
 )
 
 PLACEHOLDER_VALUES = {
@@ -166,6 +178,24 @@ def _option_match(option, value):
     return (value in yes and option in yes) or (value in no and option in no)
 
 
+def get_resume_plain_text(profile):
+    """Return plain text of candidate's resume from file or cache."""
+    text = str(profile.get("resume_text") or "").strip()
+    if text:
+        return text
+    resume_path = str(profile.get("resume_path") or "").strip()
+    if resume_path and os.path.isfile(resume_path):
+        try:
+            from resume_parser import extract_document_text
+
+            with open(resume_path, "rb") as f:
+                raw = f.read()
+            return extract_document_text(os.path.basename(resume_path), raw)
+        except Exception:
+            return ""
+    return ""
+
+
 def _compact_profile(profile):
     """Send only the facts needed to answer a question, never identity/contact data."""
     personal = profile.get("personal") or {}
@@ -270,15 +300,22 @@ def _compact_profile(profile):
 
 def _prompt(profile_summary, field):
     return f"""You are a strict field-mapping component inside a job application agent.
-Map one application field to facts explicitly present in the candidate profile.
+Map one application field only to facts explicitly present in the candidate profile.
 
 You must NOT invent, infer, embellish, or use outside knowledge. If the profile
 does not contain a direct answer, return answer_kind "none" with needs_review true.
 If an answer would be composed or paraphrased from experience, return
 answer_kind "generated" with needs_review true.
 Do not answer sensitive or eligibility questions (salary, work authorization,
-sponsorship, citizenship, demographics, disability, veteran status, criminal or
-background checks, government IDs, security clearance, age/date of birth).
+sponsorship, citizenship, security clearance, demographics, disability, veteran
+status, criminal or background checks, legal attestations, government IDs, age
+or date of birth, home/mailing address).
+
+Options:
+- When options are provided, suggested_value MUST exactly match one of the
+  available options.
+- Do not invent an option. If no option matches an explicit profile fact,
+  return answer_kind "none".
 
 Candidate profile facts (no name, email, phone, or file contents):
 {json.dumps(profile_summary, ensure_ascii=False)}
@@ -370,6 +407,7 @@ class AIMapper:
         self.profile_summary = _compact_profile(profile)
         self.calls_made = 0
         self.error_count = 0
+        self.quota_exhausted = False
         self.cache = {}
 
         enabled_setting = _env_bool("AI_ENABLED", True)
@@ -388,6 +426,7 @@ class AIMapper:
             "calls_made": self.calls_made,
             "errors": self.error_count,
             "max_fields": self.max_fields,
+            "quota_exhausted": self.quota_exhausted,
         }
 
     def _scrub(self, value):
@@ -405,7 +444,7 @@ class AIMapper:
             "Content-Type": "application/json",
             "x-goog-api-key": self.api_key,
         }
-        retryable_statuses = {429, 500, 502, 503, 504}
+        retryable_statuses = {500, 502, 503, 504}
 
         for attempt in range(self.max_retries + 1):
             request = urllib.request.Request(
@@ -511,10 +550,53 @@ class AIMapper:
                 return False
             return any(compact_text(answer) == wanted for answer in saved.values())
 
+        if key in ("education", "education.degree", "education.institution") or key.startswith("education"):
+            # 1. Other / Not Listed fallback option
+            if wanted in (
+                "other", "othernotlisted", "notlisted", "degreenotlisted",
+                "schoolnotlisted", "otherdegree", "otherschool", "unlisted", "noneoftheabove"
+            ):
+                return bool(self.profile.get("education"))
+
+            # 2. Equivalent degree options
+            edu = self.profile.get("education") or []
+            primary_deg = edu[0].get("degree", "") if edu and isinstance(edu[0], dict) else ""
+            if any(
+                term in primary_deg.lower()
+                for term in ("b.tech", "btech", "b.e.", "be", "b.s.", "bs", "bsc", "bachelor")
+            ):
+                if wanted in (
+                    "bachelorsdegree", "bachelors", "bachelor", "undergraduate",
+                    "undergraduatedegree", "bachelorofscience", "bachelorofengineering",
+                    "bs", "be", "fouryeardegree", "4yeardegree"
+                ):
+                    return True
+
+            # 3. Dates/month/year derived from education
+            corpus = compact_text(
+                json.dumps(self.profile.get("education") or [], ensure_ascii=False)
+            )
+            if wanted in corpus:
+                return True
+
+        if key in ("resume", "resume_text", "resume_summary"):
+            resume_text = compact_text(get_resume_plain_text(self.profile))
+            if wanted in resume_text:
+                return True
+            if wanted in ("yes", "no") and bool(resume_text):
+                return True
+
         if key.startswith("personal."):
             field_name = key.split(".", 1)[1]
             personal = self.profile.get("personal") or {}
-            return compact_text(personal.get(field_name, "")) == wanted
+            val = personal.get(field_name, "")
+            if compact_text(val) == wanted:
+                return True
+            if field_name == "location":
+                parts = [compact_text(p) for p in val.split(",") if p.strip()]
+                if wanted in parts:
+                    return True
+            return False
 
         if key == "work_authorization":
             return compact_text(self.profile.get("work_authorization", "")) == wanted
@@ -633,6 +715,13 @@ class AIMapper:
                 model=self.model,
                 raw={"label": field["label"]},
             )
+        if self.quota_exhausted:
+            return AIMapping(
+                action="skipped",
+                reason="AI quota was exhausted earlier in this run; no further calls were made.",
+                model=self.model,
+                raw={"label": field["label"]},
+            )
         if field["type"] == "file":
             return AIMapping(
                 action="skipped",
@@ -703,9 +792,15 @@ class AIMapper:
             # AI is optional: any provider, parsing, or transport failure becomes
             # a review/error result and must never stop the application run.
             self.error_count += 1
+            reason = self._scrub(exc) or "AI mapping failed."
+            if "429" in reason or "quota" in reason.lower():
+                self.quota_exhausted = True
+                logger.warning(
+                    "AI quota exhausted; disabling AI for the rest of this run."
+                )
             mapping = AIMapping(
                 action="error",
-                reason=self._scrub(exc) or "AI mapping failed.",
+                reason=reason,
                 model=self.model,
                 raw={"label": field["label"]},
             )

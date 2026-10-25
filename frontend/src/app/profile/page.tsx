@@ -571,7 +571,7 @@ export default function ProfilePage() {
                     />
                   </Field>
                   <p className="mt-2 text-xs text-[#7c828a]">
-                    Explicit statement required. The agent never infers or invents eligibility answers.
+                    Explicit statement required. The agent fills eligibility answers only from this statement or a saved answer; it never infers them from country or location.
                   </p>
                 </div>
               </div>

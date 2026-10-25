@@ -89,10 +89,50 @@ Date: 2026-10-25
 | Log secret/PII scan | no test email, phone, or `AIza` key material |
 | Atomic export temp cleanup | passed |
 
+### Post-Phase 6 smart-matching safety hardening (2026-10-25)
+
+A later pass corrected unsafe inference and dropdown failures found during live
+Greenhouse runs. Full details are in `phase_7_smart_matching_log.md`.
+
+- Work authorization and sponsorship are explicit-only; country/location are
+  never used to infer them.
+- Citizenship, security clearance, legal attestations, demographics, and
+  home/mailing addresses always require an explicit saved answer.
+- Long legal paragraphs and `ethnicity` labels can no longer trigger State/City
+  derivation through substring matches.
+- React hydration and delayed React-select options are handled by waiting for
+  network idle and polling for options.
+- School/degree/discipline options use equivalent matching; optional unmatched
+  fields no longer block submission.
+- Hardcoded AI `derived_facts` were removed. Legal/attestation/address fields are
+  blocked before AI, and HTTP 429/quota stops further AI calls for the run.
+- Live GRVTY fill-only run selected School → Other, Degree → Bachelor's Degree,
+  and Discipline → Computer Science, filled only the explicit U.S. eligibility
+  answers, and left the six genuinely unsupported required fields in review.
+
+Updated regression results:
+
+| Check | Result |
+|---|---|
+| `tests/test_ai_mapper.py` | 21 passed |
+| `tests/test_smart_matching.py` | 44 passed |
+| `tests/test_phase3_api.py` | 33 passed |
+| `tests/test_submission_api.py` | 51 passed |
+| `tests/test_phase6_api.py` | 48 passed |
+| `tests/test_fill_only_api.py` | 11 passed |
+| `tests/test_resume_parser.py` | 10 passed |
+| `tests/e2e_phase2.py` | 7 passed |
+| `npm run lint` | passed |
+| `npm run build` | passed |
+
+API tests used a separate temporary data directory; the real profile, database,
+uploads, export, and logs were not modified.
+
 ## Acceptance criteria
 
 All 12 acceptance criteria are now met. Criterion 11 (JSON export) is covered by
-the on-disk export, API endpoint, UI download, and tests.
+the on-disk export, API endpoint, UI download, and tests. Criterion 12 is
+reinforced by the Phase 7 explicit-only eligibility and AI quota hardening.
 
 ## Intentional limitations
 

@@ -211,6 +211,13 @@ def _run_application_locked(application_id, job_url):
                 raise AutomationError(f"Could not open the application page: {exc}") from exc
 
             page.wait_for_timeout(1000)
+            try:
+                # React/Greenhouse may still be hydrating after DOMContentLoaded.
+                # Filling before hydration can be silently wiped by a re-render.
+                page.wait_for_load_state("networkidle", timeout=15000)
+            except PlaywrightTimeoutError:
+                pass
+            page.wait_for_timeout(500)
             record_event(
                 conn,
                 application_id,

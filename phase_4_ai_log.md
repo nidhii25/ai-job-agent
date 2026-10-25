@@ -37,7 +37,9 @@ AI_AUTO_FILL_GENERATED=false
   saved answers.
 - Caches repeated field mappings.
 - Limits calls per run.
-- Retries temporary Gemini failures (429/500/502/503/504) with a short backoff.
+- Retries temporary Gemini 500/502/503/504 and connection failures with a short
+  backoff. HTTP 429/quota errors are **not** retried.
+- Stops making further AI calls for the rest of the run after a quota error.
 - Returns a safe error mapping instead of raising into the automation run.
 
 ### Response validation
@@ -54,7 +56,8 @@ The model output is treated as a suggestion, not as truth. Python validates:
 Sensitive categories include salary/compensation, work authorization,
 sponsorship, visa/citizenship, demographics, disability, veteran status,
 criminal/background checks, government IDs, security clearance, age/date of
-birth, and drug tests.
+birth, drug tests, legal attestations/acknowledgements/arbitration/consent,
+signatures, export controls, and home/mailing/street addresses.
 
 ### Auto-fill policy
 
@@ -95,7 +98,7 @@ exposing the key.
 
 `backend/venv/Scripts/python.exe -m unittest tests.test_ai_mapper -v`
 
-Result: **15/15 passed**
+Result: **21/21 passed** (current suite)
 
 Coverage includes:
 
@@ -106,6 +109,9 @@ Coverage includes:
 - hallucinated facts rejected
 - option mismatch rejected
 - sensitive field blocked before the API call
+- legal attestation blocked before the API call
+- quota circuit breaker stops further AI calls
+- no hardcoded derived eligibility facts in the prompt
 - contact details and sensitive saved answers excluded from the prompt
 - structured JSON schema in the request
 - provider error fallback
@@ -165,6 +171,26 @@ With AI enabled:
 - `tests/test_phase3_api.py`: **33/33 passed** with AI disabled.
 - `tests/test_submission_api.py`: **51/51 passed** with AI disabled.
 - `AI_ENABLED=false` preserves the previous deterministic behavior.
+
+## Post-Phase 6 safety hardening (2026-10-25)
+
+A later pass removed unsafe AI/filler behavior. Full details are in
+`phase_7_smart_matching_log.md`.
+
+- Removed the hardcoded `derived_facts` object that guessed degree level,
+  current-student status, graduation year, country, city/state, and eligibility
+  answers.
+- The prompt now maps only explicitly present profile facts. Education
+  equivalents such as `B.Tech` → `Bachelor's Degree` are handled by the
+  deterministic filler instead of model-derived facts.
+- `_fact_supported()` no longer accepts generic `yes`/`no` for education or work
+  authorization unless the literal value is present.
+- Added legal/attestation/address categories to the sensitive-field block list.
+- HTTP 429/quota is no longer retried; the first quota error sets a per-run
+  circuit breaker and later fields skip AI.
+- Live fill-only verification on GRVTY filled only the explicit eligibility
+  answers and left security clearance, citizenship, legal acknowledgements,
+  salary, and home address for review.
 
 ## Limitations and next steps
 

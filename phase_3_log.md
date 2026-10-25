@@ -173,10 +173,38 @@ $env:ALLOW_LOCAL_URLS='true'
 .\backend\venv\Scripts\python.exe tests\e2e_phase2.py
 ```
 
+## Post-Phase 6 hardening (2026-10-25)
+
+A later safety pass corrected form-filling issues found on live Greenhouse
+forms. Full details are in `phase_7_smart_matching_log.md`.
+
+- The runner now waits for network idle and a short settle period after
+  navigation. Filling immediately after `DOMContentLoaded` could be wiped by a
+  React re-render.
+- React-select option waits now poll for up to 2 seconds instead of assuming a
+  400 ms delay. This fixes delayed education dropdowns.
+- School, degree, and discipline controls use equivalent option matching:
+  `B.Tech` → `Bachelor's Degree`, unlisted school → `Other / Not Listed`,
+  `Computer Science` → `Computer Science`.
+- Optional fields that cannot be matched are skipped without creating a review
+  item. Required fields still create review items.
+- Eligibility inference was removed. Work authorization and sponsorship are
+  explicit-only; citizenship, security clearance, legal attestations,
+  demographics, and addresses always require an explicit saved answer.
+- Long legal paragraphs and demographic labels can no longer trigger State/City
+  derivation through substring matches.
+- Live GRVTY fill-only verification selected the correct education options and
+  left the six genuinely unsupported required fields in Needs Review.
+
+Regression after the hardening: Phase 3 API 33/33, submission 51/51, Phase 6
+48/48, fill-only 11/11, AI mapper 21/21, smart matching 44/44, resume parser
+10/10, UI e2e 7/7, frontend lint/build pass.
+
 ## Next Phase
 
 Phase 4 (AI-assisted mapping) remains deferred. The submission-first Phase 5
 work (review resolution, safe submission, verified confirmation, ambiguous
 outcome handling, manual login/CAPTCHA pauses) is documented in `phase_4_log.md`.
 The next remaining work is AI mapping (Phase 4), Phase 6 JSON export/reliability,
-and the final setup guide.
+and the final setup guide. Phase 7 hardening is documented in
+`phase_7_smart_matching_log.md`.

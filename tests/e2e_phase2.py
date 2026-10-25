@@ -88,9 +88,9 @@ def cleanup(created_ids, uploaded_resume_path):
 
 
 def add_saved_answer(page, question, answer):
-    page.get_by_placeholder("e.g., Are you willing to relocate?").fill(question)
-    page.get_by_placeholder("e.g., Yes").fill(answer)
-    page.get_by_role("button", name="Add Saved Answer").click()
+    page.get_by_placeholder("e.g. Are you willing to relocate?").fill(question)
+    page.get_by_placeholder("e.g. Yes, willing to relocate.").fill(answer)
+    page.get_by_role("button", name="Save Answer Pattern").click()
     expect(page.get_by_text(question, exact=True)).to_be_visible()
 
 
@@ -130,7 +130,7 @@ def main():
             page.goto(BASE, wait_until="networkidle")
             expect(page).to_have_url(f"{BASE}/apply")
             expect(
-                page.get_by_role("heading", name="Apply for a Job")
+                page.get_by_role("heading", name="Make your next move.")
             ).to_be_visible()
             expect(
                 page.get_by_role("navigation").get_by_role("link")
@@ -138,42 +138,45 @@ def main():
             step("home redirects to /apply with 3-link navigation")
 
             page.get_by_role("link", name="My Profile", exact=True).click()
-            expect(page.get_by_role("heading", name="My Profile")).to_be_visible()
-            page.get_by_placeholder("Full name", exact=True).fill("E2E Test User")
-            page.get_by_placeholder("email@example.com").fill("e2e@example.com")
-            page.get_by_placeholder("Phone number").fill("555-0101")
-            page.get_by_placeholder("City, Country").fill("Remote")
-            page.get_by_placeholder("e.g., United States").fill("United States")
+            expect(
+                page.get_by_role("heading", name="Candidate Profile.")
+            ).to_be_visible()
+            page.get_by_placeholder("e.g. Jane Doe", exact=True).fill(
+                "E2E Test User"
+            )
+            page.get_by_placeholder("e.g. jane@example.com").fill("e2e@example.com")
+            page.get_by_placeholder("+1 (555) 019-2834").fill("555-0101")
+            page.get_by_placeholder("City, State / Region").fill("Remote")
+            page.get_by_placeholder("e.g. United States").fill("United States")
             page.get_by_placeholder(
                 "https://linkedin.com/in/username"
             ).fill("https://linkedin.com/in/e2e-user")
             page.get_by_placeholder(
-                "e.g., Authorized to work in the US without sponsorship"
+                "e.g. Authorized to work in the US without sponsorship"
             ).fill("Authorized to work in the US")
 
             add_saved_answer(page, AUTHORIZATION_QUESTION, "Yes")
             add_saved_answer(page, SPONSORSHIP_QUESTION, "No")
             add_saved_answer(page, REFERRAL_QUESTION, "LinkedIn")
 
-            page.locator(
-                "section",
-                has=page.get_by_role("heading", name="Resume & Cover Letter"),
-            ).locator('input[type="file"]').set_input_files(resume_path)
+            page.locator('input[type="file"]').first.set_input_files(resume_path)
             expect(
-                page.get_by_text("Resume uploaded and saved to the profile.")
+                page.get_by_text(re.compile("Resume (parsed|attached)"))
             ).to_be_visible(timeout=15000)
 
-            page.get_by_role("button", name="Save Profile").click()
-            expect(page.get_by_text("Profile saved successfully.")).to_be_visible()
+            page.get_by_role("button", name="Save Candidate Profile").click()
+            expect(
+                page.get_by_text("Profile changes saved to local profile.json.")
+            ).to_be_visible()
 
             profile = call("GET", "/api/profile")["data"]
             uploaded_resume_path = profile["resume_path"]
 
             page.reload(wait_until="networkidle")
             expect(
-                page.get_by_placeholder("Full name", exact=True)
+                page.get_by_placeholder("e.g. Jane Doe", exact=True)
             ).to_have_value("E2E Test User")
-            expect(page.get_by_placeholder("email@example.com")).to_have_value(
+            expect(page.get_by_placeholder("e.g. jane@example.com")).to_have_value(
                 "e2e@example.com"
             )
             expect(page.get_by_text(AUTHORIZATION_QUESTION, exact=True)).to_be_visible()
@@ -187,12 +190,12 @@ def main():
 
             page.get_by_role("link", name="Apply", exact=True).click()
             expect(
-                page.get_by_role("heading", name="Apply for a Job")
+                page.get_by_role("heading", name="Make your next move.")
             ).to_be_visible()
             page.locator("#job-url").fill(JOB_URL)
             page.get_by_role("button", name="Start Application").click()
             expect(
-                page.get_by_text("Application created for URL")
+                page.get_by_text(re.compile(r"Application #\d+ initialized\."))
             ).to_be_visible(timeout=15000)
 
             for application in call("GET", "/api/applications")["data"]:
@@ -215,9 +218,10 @@ def main():
                 page.get_by_text("Expected salary", exact=True)
             ).to_be_visible(timeout=15000)
             expect(
-                page.get_by_text(
-                    "Submission paused until the review items are answered."
-                )
+                page.get_by_text("Review Items (1 open)", exact=True)
+            ).to_be_visible()
+            expect(
+                page.get_by_text("Action Required", exact=True)
             ).to_be_visible()
             expect(
                 page.get_by_text(
@@ -229,12 +233,14 @@ def main():
                 "review item, and filled status"
             )
 
-            page.get_by_role("link", name="All Applications", exact=True).click()
+            page.get_by_role("navigation").get_by_role(
+                "link", name="All Applications", exact=True
+            ).click()
             expect(page).to_have_url(f"{BASE}/applications")
             expect(
-                page.get_by_role("heading", name="All Applications")
+                page.get_by_role("heading", name="Application Ledger.")
             ).to_be_visible()
-            export_link = page.get_by_role("link", name="Download JSON export")
+            export_link = page.get_by_role("link", name=re.compile("Export JSON"))
             expect(export_link).to_be_visible()
             expect(export_link).to_have_attribute(
                 "href",
@@ -249,60 +255,67 @@ def main():
             expect(row).to_be_visible(timeout=15000)
             expect(row.get_by_text("Needs Review", exact=True)).to_be_visible()
 
-            page.get_by_label("Status Filter").select_option("Submitted")
-            expect(page.get_by_text("No applications found.")).to_be_visible(
-                timeout=15000
-            )
-            page.get_by_label("Status Filter").select_option("Needs Review")
+            page.get_by_role("button", name=re.compile("^Submitted$")).click()
+            expect(
+                page.get_by_text("No applications found", exact=True)
+            ).to_be_visible(timeout=15000)
+            page.get_by_role("button", name=re.compile("^Needs Review")).click()
             expect(row).to_be_visible(timeout=15000)
-            page.get_by_label("Status Filter").select_option("")
+            page.get_by_role("button", name="All", exact=True).click()
             expect(row).to_be_visible(timeout=15000)
 
-            row.get_by_role("button", name="Detail").click()
+            row.get_by_role("button", name="Inspect").click()
             expect(
-                page.get_by_role("heading", name="Progress History")
+                page.get_by_role("heading", name="Audit Trail & Event History")
             ).to_be_visible()
-            expect(page.get_by_text("application_created").first).to_be_visible()
-            expect(page.get_by_text("form_inspected").first).to_be_visible()
-            expect(page.get_by_text("form_filled").first).to_be_visible()
+            expect(
+                page.get_by_text("Application created for URL", exact=False).first
+            ).to_be_visible()
+            expect(
+                page.get_by_text("Inspected 13 form fields", exact=False).first
+            ).to_be_visible()
+            expect(
+                page.get_by_text("Filled 11 field(s)", exact=False).first
+            ).to_be_visible()
             expect(page.get_by_text("Expected salary", exact=True)).to_be_visible()
             expect(
-                page.get_by_text("Review Items", exact=True)
+                page.get_by_text("Review Items (1 open)", exact=True)
             ).to_be_visible()
             step("applications list, status filter, detail events, and review items")
 
-            page.get_by_placeholder("Type your answer").fill("70000")
-            page.get_by_role("button", name="Save answer").click()
-            expect(page.get_by_text("Resolved: 70000")).to_be_visible(
+            page.get_by_placeholder("Type your approved answer").fill("70000")
+            page.get_by_role("button", name="Save Answer").click()
+            expect(page.get_by_text("Resolved", exact=True)).to_be_visible(
                 timeout=15000
             )
+            expect(page.get_by_text("70000", exact=True)).to_be_visible()
             page.get_by_role("button", name="Resume & Submit").click()
 
             # The detail panel does not poll, so refresh the list manually.
             submitted_row = page.locator("tbody tr", has_text=JOB_URL).first
             for _ in range(60):
-                page.get_by_role("button", name="Refresh").click()
+                page.get_by_role("button", name=re.compile("Refresh")).click()
                 page.wait_for_timeout(1000)
                 if "Submitted" in submitted_row.inner_text():
                     break
             expect(
                 submitted_row.get_by_text("Submitted", exact=True)
             ).to_be_visible(timeout=15000)
-            submitted_row.get_by_role("button", name="Detail").click()
+            submitted_row.get_by_role("button", name="Active").click()
             expect(
-                page.get_by_text("Submission confirmed", exact=True)
+                page.get_by_text("Submission Verified", exact=True)
             ).to_be_visible(timeout=15000)
             expect(
                 page.get_by_text("Thank you for applying.", exact=False).first
             ).to_be_visible(timeout=15000)
             step("review resolution, resume, and verified submission")
 
-            page.get_by_label("Status Filter").select_option("Submitted")
+            page.get_by_role("button", name=re.compile("^Submitted$")).click()
             expect(
                 page.locator("tbody tr", has_text=JOB_URL).first
             ).to_be_visible(timeout=15000)
-            page.get_by_label("Status Filter").select_option("Needs Review")
-            expect(page.get_by_text("No applications found.")).to_be_visible(
+            page.get_by_role("button", name=re.compile("^Needs Review")).click()
+            expect(page.get_by_text("No applications found", exact=True)).to_be_visible(
                 timeout=15000
             )
             step("Submitted filter includes the verified application")

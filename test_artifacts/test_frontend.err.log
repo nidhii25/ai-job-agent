@@ -1,0 +1,147 @@
+Error: Route "/": Could not validate `instant` because an error prevented the target segment from rendering.
+    at ignore-listed frames {
+  [cause]: Error: NEXT_REDIRECT
+      at Home (src\app\page.tsx:4:11)
+    2 |
+    3 | export default function Home() {
+  > 4 |   redirect("/apply");
+      |           ^
+    5 | }
+    6 | {
+    environmentName: 'Prerender',
+    digest: 'NEXT_REDIRECT;replace;/apply;307;'
+  }
+}
+Error: Route "/": Could not validate `instant` because an error prevented the target segment from rendering.
+    at ignore-listed frames {
+  [cause]: Error: NEXT_REDIRECT
+      at Home (src\app\page.tsx:4:11)
+    2 |
+    3 | export default function Home() {
+  > 4 |   redirect("/apply");
+      |           ^
+    5 | }
+    6 | {
+    environmentName: 'Prerender',
+    digest: 'NEXT_REDIRECT;replace;/apply;307;'
+  }
+}
+Error: Route "/": Could not validate `instant` because an error prevented the target segment from rendering.
+    at ignore-listed frames {
+  [cause]: Error: NEXT_REDIRECT
+      at Home (src\app\page.tsx:4:11)
+    2 |
+    3 | export default function Home() {
+  > 4 |   redirect("/apply");
+      |           ^
+    5 | }
+    6 | {
+    environmentName: 'Prerender',
+    digest: 'NEXT_REDIRECT;replace;/apply;307;'
+  }
+}
+Error: Route "/": Could not validate `instant` because an error prevented the target segment from rendering.
+    at ignore-listed frames {
+  [cause]: Error: NEXT_REDIRECT
+      at Home (src\app\page.tsx:4:11)
+    2 |
+    3 | export default function Home() {
+  > 4 |   redirect("/apply");
+      |           ^
+    5 | }
+    6 | {
+    environmentName: 'Prerender',
+    digest: 'NEXT_REDIRECT;replace;/apply;307;'
+  }
+}
+Error: Route "/": Could not validate `instant` because an error prevented the target segment from rendering.
+    at ignore-listed frames {
+  [cause]: Error: NEXT_REDIRECT
+      at Home (src\app\page.tsx:4:11)
+    2 |
+    3 | export default function Home() {
+  > 4 |   redirect("/apply");
+      |           ^
+    5 | }
+    6 | {
+    environmentName: 'Prerender',
+    digest: 'NEXT_REDIRECT;replace;/apply;307;'
+  }
+}
+Error: Route "/": Could not validate `instant` because an error prevented the target segment from rendering.
+    at ignore-listed frames {
+  [cause]: Error: NEXT_REDIRECT
+      at Home (src\app\page.tsx:4:11)
+    2 |
+    3 | export default function Home() {
+  > 4 |   redirect("/apply");
+      |           ^
+    5 | }
+    6 | {
+    environmentName: 'Prerender',
+    digest: 'NEXT_REDIRECT;replace;/apply;307;'
+  }
+}
+Error: Route "/": Could not validate `instant` because an error prevented the target segment from rendering.
+    at ignore-listed frames {
+  [cause]: Error: NEXT_REDIRECT
+      at Home (src\app\page.tsx:4:11)
+    2 |
+    3 | export default function Home() {
+  > 4 |   redirect("/apply");
+      |           ^
+    5 | }
+    6 | {
+    environmentName: 'Prerender',
+    digest: 'NEXT_REDIRECT;replace;/apply;307;'
+  }
+}
+Error: Route "/": Could not validate `instant` because an error prevented the target segment from rendering.
+    at ignore-listed frames {
+  [cause]: Error: NEXT_REDIRECT
+      at Home (src\app\page.tsx:4:11)
+    2 |
+    3 | export default function Home() {
+  > 4 |   redirect("/apply");
+      |           ^
+    5 | }
+    6 | {
+    environmentName: 'Prerender',
+    digest: 'NEXT_REDIRECT;replace;/apply;307;'
+  }
+}
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/apply" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" className="geist_a715...">
+                          <body
+                            className="min-h-full flex flex-col"
+-                           cz-shortcut-listen="true"
+                          >
+                  ...
+ 

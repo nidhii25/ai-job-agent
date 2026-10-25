@@ -1,0 +1,29 @@
+# Python
+backend/venv/
+backend/__pycache__/
+__pycache__/
+*.pyc
+
+# Local runtime data (never commit personal data)
+backend/.env
+backend/database.db
+backend/database.db-*
+backend/profile.json
+backend/uploads/
+backend/browser_profile/
+backend/applications.json
+backend/.applications-*.tmp
+backend/logs/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/next-env.d.ts
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

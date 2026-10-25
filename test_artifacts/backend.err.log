@@ -1,0 +1,6 @@
+2026-10-25 13:49:17,521 | INFO | jobagent | Logging initialized at C:\Users\devni\Desktop\intern task\backend\logs\jobagent.log
+INFO:     Started server process [27296]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-10-25 13:53:02,446 | INFO | jobagent.api | Resume uploaded

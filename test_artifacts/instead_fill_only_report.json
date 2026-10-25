@@ -1,0 +1,55 @@
+{
+  "url": "https://job-boards.greenhouse.io/instead/jobs/7761474003",
+  "final_url": "https://job-boards.greenhouse.io/instead/jobs/7761474003",
+  "title": "Job Application for Software Engineer at Instead",
+  "has_form": true,
+  "login_wall": false,
+  "captcha_challenge_before": false,
+  "meta": [
+    "Instead",
+    "Software Engineer"
+  ],
+  "inspected": 10,
+  "required": 6,
+  "filled_count": 8,
+  "filled": [
+    {
+      "label": "First Name",
+      "value": "Test"
+    },
+    {
+      "label": "Last Name",
+      "value": "Candidate"
+    },
+    {
+      "label": "Email",
+      "value": "test.candidate@example.com"
+    },
+    {
+      "label": "Country",
+      "value": "United States"
+    },
+    {
+      "label": "Phone",
+      "value": "555-0100"
+    },
+    {
+      "label": "Resume/CV",
+      "value": "dummy_test_resume.txt"
+    },
+    {
+      "label": "Add your LinkedIn Profile url. If you don't post your url here, we will not be able to review your application.",
+      "value": "https://www.linkedin.com/in/test-candidate-dummy"
+    },
+    {
+      "label": "Which computer type do you use; Mac, Linux or PC?",
+      "value": "Mac"
+    }
+  ],
+  "review_items": [],
+  "captcha_challenge_after_fill": false,
+  "form_check_validity": true,
+  "invalid_controls": [],
+  "screenshot": "C:\\Users\\devni\\Desktop\\intern task\\test_artifacts\\instead_fill_only.png",
+  "submit_clicked": false
+}

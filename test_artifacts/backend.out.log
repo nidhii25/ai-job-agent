@@ -1,0 +1,45 @@
+INFO:     127.0.0.1:57910 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54132 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52229 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64209 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64898 - "OPTIONS /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55307 - "OPTIONS /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64898 - "GET /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64898 - "GET /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52489 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56712 - "OPTIONS /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58118 - "OPTIONS /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56712 - "GET /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58118 - "GET /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58118 - "GET /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56712 - "GET /api/profile HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58123 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61426 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61431 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58462 - "OPTIONS /api/profile/resume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58462 - "POST /api/profile/resume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61607 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50337 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50340 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51683 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51686 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51694 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65507 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60965 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60968 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60973 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63333 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57226 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50497 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54645 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56569 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58079 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58083 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64312 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61741 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56948 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64093 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60817 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61375 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61388 - "GET /health HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56036 - "GET /health HTTP/1.1" 404 Not Found

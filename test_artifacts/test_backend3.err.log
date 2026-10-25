@@ -1,0 +1,90 @@
+2026-10-25 13:36:21,136 | INFO | jobagent | Logging initialized at C:\Users\devni\Desktop\intern task\backend\logs\jobagent.log
+INFO:     Started server process [17264]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-10-25 13:36:29,574 | INFO | jobagent.api | Resume uploaded: 20261025080629_e2e_resume.txt
+2026-10-25 13:36:29,644 | INFO | jobagent.api | Profile saved
+2026-10-25 13:36:30,727 | INFO | jobagent.api | Application created: id=77 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:36:30,730 | INFO | jobagent.runner | Run started application=77 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:36:30,740 | INFO | jobagent.storage | application=77 event=run_started message=Starting browser automation.
+2026-10-25 13:36:31,236 | INFO | jobagent.storage | application=77 event=browser_opened message=Browser opened.
+2026-10-25 13:36:32,423 | INFO | jobagent.storage | application=77 event=navigated message=Opened page: http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:36:32,448 | INFO | jobagent.storage | application=77 updated_fields=company,role,updated_at
+2026-10-25 13:36:32,460 | INFO | jobagent.storage | application=77 event=job_details_detected message=Detected job: Software Engineering Intern at Acme Corp.
+2026-10-25 13:36:34,039 | INFO | jobagent.storage | application=77 event=form_inspected message=Inspected 13 form fields (11 required).
+2026-10-25 13:36:34,052 | INFO | jobagent.storage | application=77 event=field_filled message=Filled First Name
+2026-10-25 13:36:34,062 | INFO | jobagent.storage | application=77 event=field_filled message=Filled Last Name
+2026-10-25 13:36:34,074 | INFO | jobagent.storage | application=77 event=field_filled message=Filled Email
+2026-10-25 13:36:34,083 | INFO | jobagent.storage | application=77 event=field_filled message=Filled Phone
+2026-10-25 13:36:34,093 | INFO | jobagent.storage | application=77 event=field_filled message=Filled Country
+2026-10-25 13:36:34,103 | INFO | jobagent.storage | application=77 event=field_filled message=Filled Location (City)
+2026-10-25 13:36:34,111 | INFO | jobagent.storage | application=77 event=resume_uploaded message=Uploaded resume for Resume/CV
+2026-10-25 13:36:34,121 | INFO | jobagent.storage | application=77 event=field_filled message=Filled LinkedIn Profile
+2026-10-25 13:36:34,129 | INFO | jobagent.storage | application=77 event=field_filled message=Filled Are you legally authorized to work in the United States?
+2026-10-25 13:36:34,138 | INFO | jobagent.storage | application=77 event=field_filled message=Filled How did you hear about this job?
+2026-10-25 13:36:34,147 | INFO | jobagent.storage | application=77 event=field_filled message=Filled Will you now or in the future require sponsorship?
+2026-10-25 13:36:34,157 | INFO | jobagent.storage | application=77 review_item_created field=Expected salary
+2026-10-25 13:36:34,166 | INFO | jobagent.storage | application=77 event=review_item_created message=Needs review: Expected salary — No approved answer is available in saved answers for this required field.
+2026-10-25 13:36:34,175 | INFO | jobagent.storage | application=77 updated_fields=last_error,status,updated_at
+2026-10-25 13:36:34,184 | INFO | jobagent.storage | application=77 event=form_filled message=Filled 11 field(s); 1 item(s) require review.
+2026-10-25 13:36:34,193 | INFO | jobagent.storage | application=77 event=awaiting_review message=Submission paused until the review items are answered.
+2026-10-25 13:36:34,287 | INFO | jobagent.runner | Run finished application=77
+2026-10-25 13:36:42,592 | INFO | jobagent.api | Application deleted: id=77
+2026-10-25 13:36:42,599 | INFO | jobagent.api | Profile saved
+2026-10-25 13:37:10,052 | INFO | jobagent.api | Resume uploaded: 20261025080710_e2e_resume.txt
+2026-10-25 13:37:10,107 | INFO | jobagent.api | Profile saved
+2026-10-25 13:37:11,196 | INFO | jobagent.api | Application created: id=78 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:37:11,200 | INFO | jobagent.runner | Run started application=78 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:37:11,216 | INFO | jobagent.storage | application=78 event=run_started message=Starting browser automation.
+2026-10-25 13:37:11,685 | INFO | jobagent.storage | application=78 event=browser_opened message=Browser opened.
+2026-10-25 13:37:12,749 | INFO | jobagent.storage | application=78 event=navigated message=Opened page: http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:37:12,775 | INFO | jobagent.storage | application=78 updated_fields=company,role,updated_at
+2026-10-25 13:37:12,785 | INFO | jobagent.storage | application=78 event=job_details_detected message=Detected job: Software Engineering Intern at Acme Corp.
+2026-10-25 13:37:14,359 | INFO | jobagent.storage | application=78 event=form_inspected message=Inspected 13 form fields (11 required).
+2026-10-25 13:37:14,368 | INFO | jobagent.storage | application=78 event=field_filled message=Filled First Name
+2026-10-25 13:37:14,379 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Last Name
+2026-10-25 13:37:14,390 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Email
+2026-10-25 13:37:14,400 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Phone
+2026-10-25 13:37:14,411 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Country
+2026-10-25 13:37:14,422 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Location (City)
+2026-10-25 13:37:14,432 | INFO | jobagent.storage | application=78 event=resume_uploaded message=Uploaded resume for Resume/CV
+2026-10-25 13:37:14,443 | INFO | jobagent.storage | application=78 event=field_filled message=Filled LinkedIn Profile
+2026-10-25 13:37:14,454 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Are you legally authorized to work in the United States?
+2026-10-25 13:37:14,465 | INFO | jobagent.storage | application=78 event=field_filled message=Filled How did you hear about this job?
+2026-10-25 13:37:14,477 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Will you now or in the future require sponsorship?
+2026-10-25 13:37:14,487 | INFO | jobagent.storage | application=78 review_item_created field=Expected salary
+2026-10-25 13:37:14,496 | INFO | jobagent.storage | application=78 event=review_item_created message=Needs review: Expected salary — No approved answer is available in saved answers for this required field.
+2026-10-25 13:37:14,507 | INFO | jobagent.storage | application=78 updated_fields=last_error,status,updated_at
+2026-10-25 13:37:14,516 | INFO | jobagent.storage | application=78 event=form_filled message=Filled 11 field(s); 1 item(s) require review.
+2026-10-25 13:37:14,526 | INFO | jobagent.storage | application=78 event=awaiting_review message=Submission paused until the review items are answered.
+2026-10-25 13:37:14,623 | INFO | jobagent.runner | Run finished application=78
+2026-10-25 13:37:19,022 | INFO | jobagent.storage | application=78 review_item_resolved item=29 field=Expected salary
+2026-10-25 13:37:19,128 | INFO | jobagent.api | Application resumed: id=78
+2026-10-25 13:37:19,132 | INFO | jobagent.runner | Run started application=78 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:37:19,144 | INFO | jobagent.storage | application=78 event=run_started message=Starting browser automation.
+2026-10-25 13:37:19,641 | INFO | jobagent.storage | application=78 event=browser_opened message=Browser opened.
+2026-10-25 13:37:20,699 | INFO | jobagent.storage | application=78 event=navigated message=Opened page: http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:37:20,724 | INFO | jobagent.storage | application=78 updated_fields=company,role,updated_at
+2026-10-25 13:37:20,735 | INFO | jobagent.storage | application=78 event=job_details_detected message=Detected job: Software Engineering Intern at Acme Corp.
+2026-10-25 13:37:22,290 | INFO | jobagent.storage | application=78 event=form_inspected message=Inspected 13 form fields (11 required).
+2026-10-25 13:37:22,306 | INFO | jobagent.storage | application=78 event=field_filled message=Filled First Name
+2026-10-25 13:37:22,316 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Last Name
+2026-10-25 13:37:22,327 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Email
+2026-10-25 13:37:22,340 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Phone
+2026-10-25 13:37:22,350 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Country
+2026-10-25 13:37:22,361 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Location (City)
+2026-10-25 13:37:22,372 | INFO | jobagent.storage | application=78 event=resume_uploaded message=Uploaded resume for Resume/CV
+2026-10-25 13:37:22,381 | INFO | jobagent.storage | application=78 event=field_filled message=Filled LinkedIn Profile
+2026-10-25 13:37:22,395 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Are you legally authorized to work in the United States?
+2026-10-25 13:37:22,408 | INFO | jobagent.storage | application=78 event=field_filled message=Filled How did you hear about this job?
+2026-10-25 13:37:22,422 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Expected salary
+2026-10-25 13:37:22,434 | INFO | jobagent.storage | application=78 event=field_filled message=Filled Will you now or in the future require sponsorship?
+2026-10-25 13:37:22,461 | INFO | jobagent.storage | application=78 updated_fields=submission_attempted_at,submission_outcome,updated_at
+2026-10-25 13:37:22,475 | INFO | jobagent.storage | application=78 event=submitting message=All required fields are filled; submitting the application.
+2026-10-25 13:37:22,613 | INFO | jobagent.storage | application=78 event=submit_clicked message=Clicked Submit application; waiting for a confirmation signal.
+2026-10-25 13:37:22,635 | INFO | jobagent.storage | application=78 updated_fields=confirmation_details,last_error,status,submission_outcome,submitted_at,updated_at
+2026-10-25 13:37:22,646 | INFO | jobagent.storage | application=78 event=submission_confirmed message=Submission confirmed by the site: message
+2026-10-25 13:37:22,769 | INFO | jobagent.runner | Run finished application=78
+2026-10-25 13:37:24,926 | INFO | jobagent.api | Application deleted: id=78
+2026-10-25 13:37:24,943 | INFO | jobagent.api | Profile saved

@@ -1,0 +1,62 @@
+{
+  "url": "https://job-boards.greenhouse.io/instead/jobs/7761474003",
+  "submit_clicked": false,
+  "has_form": true,
+  "meta": [
+    "Instead",
+    "Software Engineer"
+  ],
+  "captcha_before": false,
+  "ai_enabled": true,
+  "filled": [
+    {
+      "label": "First Name",
+      "value": "Test"
+    },
+    {
+      "label": "Last Name",
+      "value": "Candidate"
+    },
+    {
+      "label": "Email",
+      "value": "test.candidate@example.com"
+    },
+    {
+      "label": "Country",
+      "value": "United States"
+    },
+    {
+      "label": "Phone",
+      "value": "555-0100"
+    },
+    {
+      "label": "Resume/CV",
+      "value": "dummy_test_resume.txt"
+    },
+    {
+      "label": "Add your LinkedIn Profile url. If you don't post your url here, we will not be able to review your application.",
+      "value": "https://www.linkedin.com/in/test-candidate-dummy"
+    }
+  ],
+  "review_items": [
+    {
+      "field_name": "Which computer type do you use; Mac, Linux or PC?",
+      "reason": "The profile does not contain information about the candidate's computer type (Mac, Linux, or PC).",
+      "suggested_value": null,
+      "source": "ai"
+    }
+  ],
+  "ai_filled": [],
+  "ai_errors": [],
+  "ai_status": {
+    "enabled": true,
+    "provider": "gemini",
+    "model": "gemini-3.5-flash",
+    "calls_made": 1,
+    "errors": 0,
+    "max_fields": 8
+  },
+  "form_valid": true,
+  "captcha_after": false,
+  "screenshot": "C:\\Users\\devni\\Desktop\\intern task\\test_artifacts\\instead_ai_fill_only.png"
+}

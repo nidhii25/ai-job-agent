@@ -1,0 +1,50 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.4.2 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.6:3000
+✓ Ready in 704ms
+✓ Running next.config.ts took 49ms
+- Cache Components enabled
+- Partial Prefetching enabled
+
+ GET / 307 in 770ms (next.js: 383ms, application-code: 388ms)
+ GET /apply 200 in 106ms (next.js: 16ms, application-code: 90ms)
+ GET / 307 in 88ms (next.js: 3ms, application-code: 85ms)
+ GET /apply 200 in 106ms (next.js: 7ms, application-code: 99ms)
+ GET /profile 200 in 87ms (next.js: 21ms, application-code: 66ms)
+ GET /profile 200 in 126ms (next.js: 3ms, application-code: 123ms)
+ GET /apply 200 in 58ms (next.js: 5ms, application-code: 53ms)
+ GET /applications 200 in 85ms (next.js: 20ms, application-code: 64ms)
+ GET /applications 200 in 113ms (next.js: 9ms, application-code: 104ms)
+ GET / 307 in 142ms (next.js: 4ms, application-code: 138ms)
+ GET /apply 200 in 77ms (next.js: 5ms, application-code: 72ms)
+ GET / 307 in 143ms (next.js: 2ms, application-code: 141ms)
+ GET /apply 200 in 107ms (next.js: 4ms, application-code: 103ms)
+ GET /profile 200 in 57ms (next.js: 5ms, application-code: 52ms)
+ GET /profile 200 in 80ms (next.js: 5ms, application-code: 75ms)
+ GET /apply 200 in 68ms (next.js: 4ms, application-code: 64ms)
+ GET /applications 200 in 66ms (next.js: 6ms, application-code: 60ms)
+ GET / 307 in 156ms (next.js: 3ms, application-code: 152ms)
+ GET /apply 200 in 78ms (next.js: 4ms, application-code: 74ms)
+ GET /profile 200 in 55ms (next.js: 3ms, application-code: 52ms)
+ GET /profile 200 in 76ms (next.js: 3ms, application-code: 72ms)
+ GET /apply 200 in 92ms (next.js: 5ms, application-code: 87ms)
+ GET /applications 200 in 60ms (next.js: 6ms, application-code: 54ms)
+ GET /applications 200 in 128ms (next.js: 8ms, application-code: 119ms)
+ GET / 307 in 99ms (next.js: 2ms, application-code: 96ms)
+ GET /apply 200 in 73ms (next.js: 2ms, application-code: 71ms)
+ GET / 307 in 133ms (next.js: 3ms, application-code: 130ms)
+ GET /apply 200 in 100ms (next.js: 2ms, application-code: 98ms)
+ GET / 307 in 104ms (next.js: 4ms, application-code: 99ms)
+ GET /apply 200 in 82ms (next.js: 2ms, application-code: 79ms)
+ GET / 307 in 125ms (next.js: 4ms, application-code: 121ms)
+ GET /apply 200 in 105ms (next.js: 4ms, application-code: 101ms)
+ GET /profile 200 in 83ms (next.js: 3ms, application-code: 80ms)
+✓ Compiled in 102ms
+✓ Compiled in 39ms
+ GET /profile 200 in 119ms (next.js: 64ms, application-code: 56ms)
+✓ Compiled in 86ms
+[?25h

@@ -1,0 +1,83 @@
+2026-10-25 13:34:12,569 | INFO | jobagent | Logging initialized at C:\Users\devni\Desktop\intern task\backend\logs\jobagent.log
+INFO:     Started server process [5084]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-10-25 13:34:22,022 | INFO | jobagent.api | Application deleted: id=73
+2026-10-25 13:34:22,053 | INFO | jobagent.api | Profile saved
+2026-10-25 13:34:32,940 | INFO | jobagent.api | Applications export downloaded
+2026-10-25 13:34:33,001 | INFO | jobagent.api | Resume uploaded: 20261025080432_phase6_resume.txt
+2026-10-25 13:34:33,009 | INFO | jobagent.api | Profile saved
+2026-10-25 13:34:33,029 | INFO | jobagent.api | Application created: id=74 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:34:33,033 | INFO | jobagent.runner | Run started application=74 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:34:33,043 | INFO | jobagent.storage | application=74 event=run_started message=Starting browser automation.
+2026-10-25 13:34:33,577 | INFO | jobagent.storage | application=74 event=browser_opened message=Browser opened.
+2026-10-25 13:34:34,746 | INFO | jobagent.storage | application=74 event=navigated message=Opened page: http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:34:34,772 | INFO | jobagent.storage | application=74 updated_fields=company,role,updated_at
+2026-10-25 13:34:34,786 | INFO | jobagent.storage | application=74 event=job_details_detected message=Detected job: Software Engineering Intern at Acme Corp.
+2026-10-25 13:34:36,362 | INFO | jobagent.storage | application=74 event=form_inspected message=Inspected 13 form fields (11 required).
+2026-10-25 13:34:36,372 | INFO | jobagent.storage | application=74 event=field_filled message=Filled First Name
+2026-10-25 13:34:36,384 | INFO | jobagent.storage | application=74 event=field_filled message=Filled Last Name
+2026-10-25 13:34:36,395 | INFO | jobagent.storage | application=74 event=field_filled message=Filled Email
+2026-10-25 13:34:36,405 | INFO | jobagent.storage | application=74 event=field_filled message=Filled Phone
+2026-10-25 13:34:36,415 | INFO | jobagent.storage | application=74 event=field_filled message=Filled Country
+2026-10-25 13:34:36,426 | INFO | jobagent.storage | application=74 event=field_filled message=Filled Location (City)
+2026-10-25 13:34:36,436 | INFO | jobagent.storage | application=74 event=resume_uploaded message=Uploaded resume for Resume/CV
+2026-10-25 13:34:36,446 | INFO | jobagent.storage | application=74 event=field_filled message=Filled LinkedIn Profile
+2026-10-25 13:34:36,456 | INFO | jobagent.storage | application=74 event=field_filled message=Filled Are you legally authorized to work in the United States?
+2026-10-25 13:34:36,467 | INFO | jobagent.storage | application=74 event=field_filled message=Filled How did you hear about this job?
+2026-10-25 13:34:36,478 | INFO | jobagent.storage | application=74 event=field_filled message=Filled Will you now or in the future require sponsorship?
+2026-10-25 13:34:36,487 | INFO | jobagent.storage | application=74 review_item_created field=Expected salary
+2026-10-25 13:34:36,499 | INFO | jobagent.storage | application=74 event=review_item_created message=Needs review: Expected salary — No approved answer is available in saved answers for this required field.
+2026-10-25 13:34:36,509 | INFO | jobagent.storage | application=74 updated_fields=last_error,status,updated_at
+2026-10-25 13:34:36,518 | INFO | jobagent.storage | application=74 event=form_filled message=Filled 11 field(s); 1 item(s) require review.
+2026-10-25 13:34:36,532 | INFO | jobagent.storage | application=74 event=awaiting_review message=Submission paused until the review items are answered.
+2026-10-25 13:34:36,625 | INFO | jobagent.runner | Run finished application=74
+2026-10-25 13:34:36,799 | INFO | jobagent.api | Applications export downloaded
+2026-10-25 13:34:36,824 | INFO | jobagent.storage | application=74 review_item_resolved item=27 field=Expected salary
+2026-10-25 13:34:36,860 | INFO | jobagent.api | Applications export downloaded
+2026-10-25 13:34:36,899 | INFO | jobagent.api | Profile saved
+2026-10-25 13:34:36,918 | INFO | jobagent.api | Application created: id=75 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:34:36,920 | INFO | jobagent.runner | Run started application=75 url=http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:34:36,929 | INFO | jobagent.storage | application=75 event=run_started message=Starting browser automation.
+2026-10-25 13:34:37,424 | INFO | jobagent.storage | application=75 event=browser_opened message=Browser opened.
+2026-10-25 13:34:38,512 | INFO | jobagent.storage | application=75 event=navigated message=Opened page: http://127.0.0.1:8000/test/greenhouse
+2026-10-25 13:34:38,537 | INFO | jobagent.storage | application=75 updated_fields=company,role,updated_at
+2026-10-25 13:34:38,549 | INFO | jobagent.storage | application=75 event=job_details_detected message=Detected job: Software Engineering Intern at Acme Corp.
+2026-10-25 13:34:40,145 | INFO | jobagent.storage | application=75 event=form_inspected message=Inspected 13 form fields (11 required).
+2026-10-25 13:34:40,159 | INFO | jobagent.storage | application=75 event=field_filled message=Filled First Name
+2026-10-25 13:34:40,169 | INFO | jobagent.storage | application=75 event=field_filled message=Filled Last Name
+2026-10-25 13:34:40,182 | INFO | jobagent.storage | application=75 event=field_filled message=Filled Email
+2026-10-25 13:34:40,195 | INFO | jobagent.storage | application=75 event=field_filled message=Filled Phone
+2026-10-25 13:34:40,204 | INFO | jobagent.storage | application=75 event=field_filled message=Filled Country
+2026-10-25 13:34:40,217 | INFO | jobagent.storage | application=75 event=field_filled message=Filled Location (City)
+2026-10-25 13:34:40,231 | INFO | jobagent.storage | application=75 event=resume_uploaded message=Uploaded resume for Resume/CV
+2026-10-25 13:34:40,243 | INFO | jobagent.storage | application=75 event=field_filled message=Filled LinkedIn Profile
+2026-10-25 13:34:40,252 | INFO | jobagent.storage | application=75 event=field_filled message=Filled Are you legally authorized to work in the United States?
+2026-10-25 13:34:40,263 | INFO | jobagent.storage | application=75 event=field_filled message=Filled How did you hear about this job?
+2026-10-25 13:34:40,274 | INFO | jobagent.storage | application=75 event=field_filled message=Filled Expected salary
+2026-10-25 13:34:40,285 | INFO | jobagent.storage | application=75 event=field_filled message=Filled Will you now or in the future require sponsorship?
+2026-10-25 13:34:40,307 | INFO | jobagent.storage | application=75 updated_fields=submission_attempted_at,submission_outcome,updated_at
+2026-10-25 13:34:40,317 | INFO | jobagent.storage | application=75 event=submitting message=All required fields are filled; submitting the application.
+2026-10-25 13:34:40,469 | INFO | jobagent.storage | application=75 event=submit_clicked message=Clicked Submit application; waiting for a confirmation signal.
+2026-10-25 13:34:40,483 | INFO | jobagent.storage | application=75 updated_fields=confirmation_details,last_error,status,submission_outcome,submitted_at,updated_at
+2026-10-25 13:34:40,495 | INFO | jobagent.storage | application=75 event=submission_confirmed message=Submission confirmed by the site: message
+2026-10-25 13:34:40,583 | INFO | jobagent.runner | Run finished application=75
+2026-10-25 13:34:40,624 | INFO | jobagent.api | Applications export downloaded
+2026-10-25 13:34:40,664 | INFO | jobagent.api | Application created: id=76 url=http://127.0.0.1:1
+2026-10-25 13:34:40,667 | INFO | jobagent.runner | Run started application=76 url=http://127.0.0.1:1
+2026-10-25 13:34:40,681 | INFO | jobagent.storage | application=76 event=run_started message=Starting browser automation.
+2026-10-25 13:34:41,285 | INFO | jobagent.storage | application=76 event=browser_opened message=Browser opened.
+2026-10-25 13:34:41,419 | WARNING | jobagent.runner | Run failed application=76 reason=Could not open the application page: Page.goto: net::ERR_UNSAFE_PORT at http://127.0.0.1:1/
+Call log:
+  - navigating to "http://127.0.0.1:1/", waiting until "domcontentloaded"
+
+2026-10-25 13:34:41,428 | INFO | jobagent.storage | application=76 updated_fields=last_error,status,updated_at
+2026-10-25 13:34:41,445 | INFO | jobagent.storage | application=76 event=failed message=Could not open the application page: Page.goto: net::ERR_UNSAFE_PORT at http://127.0.0.1:1/ Call log:   - navigating to "http://127.0.0.1:1/", waiting until "domcontentloaded" 
+2026-10-25 13:34:41,452 | INFO | jobagent.runner | Run finished application=76
+2026-10-25 13:34:41,506 | INFO | jobagent.api | Applications export downloaded
+2026-10-25 13:34:41,556 | INFO | jobagent.api | Application deleted: id=76
+2026-10-25 13:34:41,584 | INFO | jobagent.api | Applications export downloaded
+2026-10-25 13:34:41,635 | INFO | jobagent.api | Application deleted: id=74
+2026-10-25 13:34:41,670 | INFO | jobagent.api | Application deleted: id=75
+2026-10-25 13:34:41,679 | INFO | jobagent.api | Profile saved

@@ -184,13 +184,35 @@ def _compact_profile(profile):
         if isinstance(item, dict):
             education.append(
                 {
-                    "institution": short(item.get("institution"), 160),
-                    "degree": short(item.get("degree"), 160),
-                    "field_of_study": short(
-                        item.get("field_of_study") or item.get("field"), 160
+                    "institution": short(
+                        item.get("institution")
+                        or item.get("school")
+                        or item.get("university")
+                        or item.get("college"),
+                        160,
                     ),
-                    "start_date": short(item.get("start_date"), 40),
-                    "end_date": short(item.get("end_date"), 40),
+                    "degree": short(
+                        item.get("degree") or item.get("qualification"), 160
+                    ),
+                    "field_of_study": short(
+                        item.get("field_of_study")
+                        or item.get("field")
+                        or item.get("major"),
+                        160,
+                    ),
+                    "dates": short(
+                        item.get("dates") or item.get("attendance_dates"), 80
+                    ),
+                    "start_date": short(
+                        item.get("start_date") or item.get("start"), 40
+                    ),
+                    "end_date": short(
+                        item.get("end_date")
+                        or item.get("graduation_date")
+                        or item.get("expected_graduation_date")
+                        or item.get("end"),
+                        40,
+                    ),
                     "gpa": short(item.get("gpa"), 40),
                 }
             )
@@ -272,6 +294,9 @@ Rules:
   profile (or is one of the provided options and is supported by an explicit fact).
 - answer_kind "generated" for any composed prose. Set needs_review true.
 - answer_kind "none" when no fact supports an answer.
+- For education fields, use the matching education record and return only the
+  requested fact. Dates may be listed as a date range or separate start/end
+  dates; do not invent missing dates or convert a GPA scale.
 - suggested_value must be short (<= 500 characters) and must exactly match one
   of the options when options are provided.
 - confidence is a number from 0.0 to 1.0.

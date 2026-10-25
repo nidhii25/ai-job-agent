@@ -27,7 +27,10 @@ The app has exactly three pages:
 - The agent pauses instead of guessing when a required field cannot be answered
   from the profile or an explicit saved answer.
 - Sensitive/eligibility questions (salary, authorization, sponsorship,
-  demographics, criminal/background, IDs, etc.) are never sent to AI.
+  demographics, criminal/background, IDs, etc.) are never sent to AI. Work
+  authorization and sponsorship answers are filled only from an explicit
+  work-authorization profile value or saved answer; the agent never infers them
+  from country or location.
 - AI-generated prose is shown as a review suggestion by default. It is not
   auto-filled unless `AI_AUTO_FILL_GENERATED=true`.
 - CAPTCHA and login/OTP challenges are never bypassed. Complete them manually in
@@ -185,7 +188,11 @@ Backend health: <http://127.0.0.1:8000/api/health>
 - Uploading a cover letter extracts its text into the cover letter field. The file
   itself is also used when a Greenhouse form requires a cover-letter upload.
 - Saved answers are matched by question text. Sensitive questions require an
-  explicit saved answer; AI is not allowed to answer them.
+  explicit saved answer or, for work authorization, an explicit work
+  authorization profile value; AI is not allowed to answer them. Education
+  fields such as school, degree, major, GPA, and dates are filled from a
+  uniquely saved education record, with AI mapping available for other grounded
+  fields when enabled.
 - Keep your profile and resume accurate. The agent is designed to pause rather
   than invent personal facts.
 

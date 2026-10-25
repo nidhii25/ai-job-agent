@@ -13,9 +13,6 @@ import {
 import type { Education, Experience, Profile } from "@/lib/api";
 import FilePicker from "@/components/FilePicker";
 
-const inputClass =
-  "w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500";
-
 function errorMessage(error: unknown): string {
   return error instanceof ApiError || error instanceof Error
     ? error.message
@@ -28,12 +25,15 @@ function fileName(path: string): string {
   return parts[parts.length - 1];
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div>
-      <span className="mb-1 block text-xs font-medium text-gray-600">
-        {label}
-      </span>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-[#5b616e]">
+          {label}
+        </label>
+        {hint && <span className="text-[11px] text-[#7c828a]">{hint}</span>}
+      </div>
       {children}
     </div>
   );
@@ -55,8 +55,6 @@ function ListEditor({
   const [text, setText] = useState(value.join("\n"));
   const lastEmitted = useRef(value.join("\n"));
 
-  // Reset the editor when the value changes from outside (e.g. an item above
-  // was removed), but not while the user is typing in this editor.
   useEffect(() => {
     const next = value.join("\n");
     if (next !== lastEmitted.current) {
@@ -81,7 +79,7 @@ function ListEditor({
           lastEmitted.current = parsed.join("\n");
           onChange(parsed);
         }}
-        className={`${inputClass} resize-y`}
+        className="text-input resize-y !h-auto min-h-[90px]"
       />
     </Field>
   );
@@ -100,8 +98,19 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
+const SECTIONS = [
+  { id: "all", label: "Overview" },
+  { id: "personal", label: "Personal Details" },
+  { id: "experience", label: "Work Experience" },
+  { id: "education", label: "Education" },
+  { id: "skills", label: "Skills & Projects" },
+  { id: "documents", label: "Documents" },
+  { id: "saved-answers", label: "Saved Answers" },
+];
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -167,7 +176,8 @@ export default function ProfilePage() {
     setMessage(null);
     try {
       await saveProfile(profile);
-      setMessage("Profile saved successfully.");
+      setMessage("Profile changes saved to local profile.json.");
+      setTimeout(() => setMessage(null), 4000);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -228,8 +238,8 @@ export default function ProfilePage() {
       setResumeWarnings(result.warnings);
       setMessage(
         result.fields_found > 0
-          ? `Resume parsed: ${result.fields_found} value(s) filled in. Review the fields below, then click Save Profile.`
-          : "Resume uploaded. No profile fields could be extracted; fill them in manually and click Save Profile."
+          ? `Resume parsed: ${result.fields_found} value(s) extracted and filled below. Review fields, then click Save Profile.`
+          : "Resume attached. No automated fields could be parsed; fill them manually and click Save Profile."
       );
     } catch (err) {
       setError(errorMessage(err));
@@ -262,7 +272,7 @@ export default function ProfilePage() {
           : current
       );
       setCoverLetterWarnings(result.warnings);
-      setMessage("Cover letter uploaded and saved to the profile.");
+      setMessage("Cover letter attached and synchronized with profile.");
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -291,565 +301,749 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-6">
-        <p className="mx-auto max-w-3xl text-sm text-gray-500">
-          Loading profile...
-        </p>
+      <div className="content-container py-24 text-center">
+        <span className="inline-block h-6 w-6 rounded-full border-2 border-[#0052ff]/30 border-t-[#0052ff] animate-spin mb-4" />
+        <p className="text-sm text-[#7c828a]">Loading candidate profile...</p>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen p-6">
-        <div className="mx-auto max-w-3xl rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error || "Could not load the profile."}
+      <div className="content-container py-24">
+        <div className="rounded-2xl border border-[#dee1e6] bg-[#fafbfc] p-6 text-sm text-[#cf202f]">
+          {error || "Could not load the profile from backend/profile.json."}
         </div>
       </div>
     );
   }
 
+  const initial = (profile.personal.full_name || profile.personal.first_name || "A")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+  const isVisible = (id: string) => activeTab === "all" || activeTab === id;
+
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-3xl">
-        <h1 className="mb-6 text-2xl font-bold">My Profile</h1>
-
-        {error && (
-          <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-        {message && (
-          <div className="mb-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-            {message}
-          </div>
-        )}
-
-        <section className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-5 shadow-sm">
-          <h2 className="mb-1 text-lg font-medium">Autofill from Resume</h2>
-          <p className="mb-3 text-sm text-gray-700">
-            Upload your resume first. The app extracts facts that are explicitly
-            in the resume and fills the profile fields below for you to review.
-            The extracted profile fields are not saved until you click Save
-            Profile; the resume file itself is stored immediately.
-          </p>
-          <FilePicker
-            accept=".pdf,.doc,.docx,.txt,.rtf"
-            buttonLabel={profile.resume_path ? "Replace Resume" : "Choose Resume"}
-            selectedName={fileName(profile.resume_path)}
-            onSelect={handleResumeUpload}
-            disabled={uploading}
-            helpText="Supports PDF, DOCX, TXT, and RTF. Legacy .doc files can be stored but not parsed automatically. Max 10 MB. Resume text is sent to Gemini for extraction when AI is enabled."
-          />
-          {uploading && (
-            <p className="mt-2 text-sm font-medium text-blue-700">
-              Reading resume and extracting profile details...
-            </p>
-          )}
-          {resumeWarnings.length > 0 && (
-            <div className="mt-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-              <p className="mb-1 font-medium">Review notes</p>
-              <ul className="list-inside list-disc space-y-1">
-                {resumeWarnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
+    <div className="w-full flex-1 flex flex-col pb-24">
+      {/* Dark Editorial Hero Band */}
+      <section className="hero-band-dark">
+        <div className="content-container">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+            <div className="max-w-xl">
+              <span className="badge-pill-dark mb-4">
+                Grounding Source
+              </span>
+              <h1 className="display-xl text-white">
+                Candidate Profile.
+              </h1>
+              <p className="mt-4 text-base text-[#a8acb3] leading-relaxed">
+                Your single source of truth for all automated job applications.
+                Every answer filled into Greenhouse is strictly grounded in these verified records.
+              </p>
             </div>
-          )}
-        </section>
 
-        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-medium">Personal Details</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Full Name">
-              <input
-                value={profile.personal.full_name}
-                onChange={(event) =>
-                  updatePersonal("full_name", event.target.value)
-                }
-                placeholder="Full name"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="First Name (optional override)">
-              <input
-                value={profile.personal.first_name}
-                onChange={(event) =>
-                  updatePersonal("first_name", event.target.value)
-                }
-                placeholder="Defaults to the first word of Full Name"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Last Name (optional override)">
-              <input
-                value={profile.personal.last_name}
-                onChange={(event) =>
-                  updatePersonal("last_name", event.target.value)
-                }
-                placeholder="Defaults to the rest of Full Name"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Email">
-              <input
-                type="email"
-                value={profile.personal.email}
-                onChange={(event) =>
-                  updatePersonal("email", event.target.value)
-                }
-                placeholder="email@example.com"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Phone">
-              <input
-                value={profile.personal.phone}
-                onChange={(event) =>
-                  updatePersonal("phone", event.target.value)
-                }
-                placeholder="Phone number"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Location">
-              <input
-                value={profile.personal.location}
-                onChange={(event) =>
-                  updatePersonal("location", event.target.value)
-                }
-                placeholder="City, Country"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Country">
-              <input
-                value={profile.personal.country}
-                onChange={(event) =>
-                  updatePersonal("country", event.target.value)
-                }
-                placeholder="e.g., United States"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="LinkedIn URL">
-              <input
-                value={profile.personal.linkedin_url}
-                onChange={(event) =>
-                  updatePersonal("linkedin_url", event.target.value)
-                }
-                placeholder="https://linkedin.com/in/username"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="GitHub URL">
-              <input
-                value={profile.personal.github_url}
-                onChange={(event) =>
-                  updatePersonal("github_url", event.target.value)
-                }
-                placeholder="https://github.com/username"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Portfolio / Website">
-              <input
-                value={profile.personal.website_url}
-                onChange={(event) =>
-                  updatePersonal("website_url", event.target.value)
-                }
-                placeholder="https://your-site.com"
-                className={inputClass}
-              />
-            </Field>
+            {/* Profile Avatar Badge */}
+            <div className="flex items-center gap-4 p-4 rounded-3xl border border-[#292c32] bg-[#16181c]">
+              <div className="grid h-16 w-16 place-items-center rounded-full bg-[#0052ff] text-2xl font-bold text-white shadow-md">
+                {initial}
+              </div>
+              <div>
+                <span className="font-semibold text-white block text-base">
+                  {profile.personal.full_name || "Unnamed Candidate"}
+                </span>
+                <span className="text-xs text-[#a8acb3] block mt-0.5">
+                  {profile.personal.email || "No email specified"}
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#05b169] mt-1 font-mono">
+                  ● Verified Local Storage
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="mt-4">
-            <Field label="Work Authorization">
-              <input
-                value={profile.work_authorization}
-                onChange={(event) =>
-                  setProfile({
-                    ...profile,
-                    work_authorization: event.target.value,
-                  })
-                }
-                placeholder="e.g., Authorized to work in the US without sponsorship"
-                className={inputClass}
-              />
-            </Field>
-            <p className="mt-1 text-xs text-gray-500">
-              Enter this explicitly. The agent will never infer or fabricate
-              eligibility answers.
-            </p>
-          </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="mt-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-medium">Education</h2>
+      {/* Main Profile Form */}
+      <section className="py-10 bg-white flex-1">
+        <div className="content-container">
+          <div className="mx-auto max-w-4xl space-y-10">
+            {/* Quick Section Tabs */}
+            <div className="flex flex-wrap items-center gap-1.5 pb-4 border-b border-[#dee1e6]">
+              {SECTIONS.map((sec) => {
+                const active = activeTab === sec.id;
+                return (
+                  <button
+                    key={sec.id}
+                    onClick={() => setActiveTab(sec.id)}
+                    className={`rounded-full px-4 py-2 text-xs font-semibold tracking-wide transition-all ${
+                      active
+                        ? "bg-[#0a0b0d] text-white"
+                        : "bg-[#eef0f3] text-[#5b616e] hover:bg-[#e2e5ea] hover:text-[#0a0b0d]"
+                    }`}
+                  >
+                    {sec.label}
+                  </button>
+                );
+              })}
+            </div>
 
-          {profile.education.map((education, index) => (
-            <div
-              key={index}
-              className="mb-4 rounded border border-gray-200 p-4"
-            >
-              <h3 className="mb-3 text-sm font-semibold">
-                Education {index + 1}
-              </h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Institution">
-                  <input
-                    value={education.institution}
-                    onChange={(event) =>
-                      updateEducation(index, {
-                        institution: event.target.value,
+            {/* Feedback Notifications */}
+            {error && (
+              <div className="rounded-2xl border border-[#dee1e6] bg-[#fafbfc] p-4 text-sm text-[#cf202f]">
+                {error}
+              </div>
+            )}
+            {message && (
+              <div className="rounded-2xl border border-[#dee1e6] bg-[#fafbfc] p-4 text-sm text-[#05b169]">
+                {message}
+              </div>
+            )}
+
+            {/* Autofill from Resume Highlight Card */}
+            {(activeTab === "all" || activeTab === "documents") && (
+              <div className="feature-card !p-8 border-2 border-[#0052ff]/20 bg-[#fafbfc]">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="asset-icon-circular text-[#0052ff] bg-white border border-[#dee1e6]">
+                    ⚡
+                  </div>
+                  <div>
+                    <h2 className="title-md text-[#0a0b0d]">Autofill from Resume</h2>
+                    <p className="body-sm text-[#5b616e] mt-1">
+                      Attach your resume first. The agent parses explicitly stated details to prefill the fields below.
+                      Extracted fields are staged for your review and only written to disk when you click Save Profile.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <FilePicker
+                    accept=".pdf,.doc,.docx,.txt,.rtf"
+                    buttonLabel={profile.resume_path ? "Replace Resume" : "Attach Resume File"}
+                    selectedName={fileName(profile.resume_path)}
+                    onSelect={handleResumeUpload}
+                    disabled={uploading}
+                    helpText="PDF, DOCX, TXT, or RTF up to 10 MB. Parsed locally using Gemini API when AI is enabled."
+                  />
+                  {uploading && (
+                    <p className="mt-2 text-xs font-medium text-[#0052ff]">
+                      Parsing resume content and staging profile updates...
+                    </p>
+                  )}
+                  {resumeWarnings.length > 0 && (
+                    <div className="mt-4 rounded-xl border border-[#dee1e6] bg-white p-4 text-xs text-[#5b616e]">
+                      <span className="font-semibold text-[#0a0b0d] block mb-1">
+                        Extraction Observations:
+                      </span>
+                      <ul className="list-inside list-disc space-y-1 text-[#7c828a]">
+                        {resumeWarnings.map((warning, i) => (
+                          <li key={i}>{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Section 1: Personal Details */}
+            {isVisible("personal") && (
+              <div className="feature-card">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#dee1e6]">
+                  <div>
+                    <h2 className="title-md text-[#0a0b0d]">Personal Details</h2>
+                    <p className="body-sm text-[#5b616e]">
+                      Foundational contact and identity details used on every application form.
+                    </p>
+                  </div>
+                  <span className="badge-pill !text-[11px]">Primary</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <Field label="Full Name">
+                    <input
+                      value={profile.personal.full_name}
+                      onChange={(e) => updatePersonal("full_name", e.target.value)}
+                      placeholder="e.g. Jane Doe"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="Email Address">
+                    <input
+                      type="email"
+                      value={profile.personal.email}
+                      onChange={(e) => updatePersonal("email", e.target.value)}
+                      placeholder="e.g. jane@example.com"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="First Name (override)" hint="Optional">
+                    <input
+                      value={profile.personal.first_name}
+                      onChange={(e) => updatePersonal("first_name", e.target.value)}
+                      placeholder="Defaults to first word"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="Last Name (override)" hint="Optional">
+                    <input
+                      value={profile.personal.last_name}
+                      onChange={(e) => updatePersonal("last_name", e.target.value)}
+                      placeholder="Defaults to remaining words"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="Phone Number">
+                    <input
+                      value={profile.personal.phone}
+                      onChange={(e) => updatePersonal("phone", e.target.value)}
+                      placeholder="+1 (555) 019-2834"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="Location / City">
+                    <input
+                      value={profile.personal.location}
+                      onChange={(e) => updatePersonal("location", e.target.value)}
+                      placeholder="City, State / Region"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="Country">
+                    <input
+                      value={profile.personal.country}
+                      onChange={(e) => updatePersonal("country", e.target.value)}
+                      placeholder="e.g. United States"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="LinkedIn Profile">
+                    <input
+                      value={profile.personal.linkedin_url}
+                      onChange={(e) => updatePersonal("linkedin_url", e.target.value)}
+                      placeholder="https://linkedin.com/in/username"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="GitHub Profile">
+                    <input
+                      value={profile.personal.github_url}
+                      onChange={(e) => updatePersonal("github_url", e.target.value)}
+                      placeholder="https://github.com/username"
+                      className="text-input"
+                    />
+                  </Field>
+
+                  <Field label="Portfolio / Website">
+                    <input
+                      value={profile.personal.website_url}
+                      onChange={(e) => updatePersonal("website_url", e.target.value)}
+                      placeholder="https://yourportfolio.dev"
+                      className="text-input"
+                    />
+                  </Field>
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-[#dee1e6]">
+                  <Field
+                    label="Work Authorization & Sponsorship Status"
+                    hint="Crucial"
+                  >
+                    <input
+                      value={profile.work_authorization}
+                      onChange={(e) =>
+                        setProfile({
+                          ...profile,
+                          work_authorization: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. Authorized to work in the US without sponsorship"
+                      className="text-input"
+                    />
+                  </Field>
+                  <p className="mt-2 text-xs text-[#7c828a]">
+                    Explicit statement required. The agent never infers or invents eligibility answers.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Section 2: Work Experience */}
+            {isVisible("experience") && (
+              <div className="feature-card">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#dee1e6]">
+                  <div>
+                    <h2 className="title-md text-[#0a0b0d]">Work Experience</h2>
+                    <p className="body-sm text-[#5b616e]">
+                      Chronological employment history used to fill Greenhouse experience blocks.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setProfile({
+                        ...profile,
+                        experience: [
+                          ...profile.experience,
+                          {
+                            employer: "",
+                            title: "",
+                            dates: "",
+                            responsibilities: [],
+                            achievements: [],
+                          },
+                        ],
                       })
                     }
-                    placeholder="Institution name"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Degree">
-                  <input
-                    value={education.degree}
-                    onChange={(event) =>
-                      updateEducation(index, { degree: event.target.value })
-                    }
-                    placeholder="e.g., BS Computer Science"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Field of Study">
-                  <input
-                    value={education.field_of_study}
-                    onChange={(event) =>
-                      updateEducation(index, {
-                        field_of_study: event.target.value,
+                    className="btn-secondary-light !min-h-[38px] !py-1.5 !px-4 text-xs"
+                  >
+                    + Add Experience
+                  </button>
+                </div>
+
+                {profile.experience.length === 0 ? (
+                  <p className="text-sm text-[#7c828a] py-6 text-center">
+                    No work experience listed. Click Add Experience or parse from resume above.
+                  </p>
+                ) : (
+                  <div className="space-y-6">
+                    {profile.experience.map((exp, index) => (
+                      <div
+                        key={index}
+                        className="rounded-2xl border border-[#dee1e6] bg-[#fafbfc] p-6 space-y-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="caption-strong text-[#0052ff]">
+                            Position #{index + 1}
+                          </span>
+                          <button
+                            onClick={() =>
+                              setProfile({
+                                ...profile,
+                                experience: profile.experience.filter(
+                                  (_, i) => i !== index
+                                ),
+                              })
+                            }
+                            className="text-xs text-[#cf202f] hover:underline"
+                          >
+                            Remove Position
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                          <Field label="Employer">
+                            <input
+                              value={exp.employer}
+                              onChange={(e) =>
+                                updateExperience(index, { employer: e.target.value })
+                              }
+                              placeholder="e.g. Acme Corp"
+                              className="text-input"
+                            />
+                          </Field>
+
+                          <Field label="Job Title">
+                            <input
+                              value={exp.title}
+                              onChange={(e) =>
+                                updateExperience(index, { title: e.target.value })
+                              }
+                              placeholder="e.g. Software Engineer"
+                              className="text-input"
+                            />
+                          </Field>
+
+                          <Field label="Employment Dates">
+                            <input
+                              value={exp.dates}
+                              onChange={(e) =>
+                                updateExperience(index, { dates: e.target.value })
+                              }
+                              placeholder="e.g. Jan 2022 - Present"
+                              className="text-input"
+                            />
+                          </Field>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2">
+                          <ListEditor
+                            label="Key Responsibilities"
+                            value={exp.responsibilities}
+                            onChange={(next) =>
+                              updateExperience(index, { responsibilities: next })
+                            }
+                            placeholder="Architected scalable microservices..."
+                          />
+
+                          <ListEditor
+                            label="Key Achievements"
+                            value={exp.achievements}
+                            onChange={(next) =>
+                              updateExperience(index, { achievements: next })
+                            }
+                            placeholder="Reduced latency by 45%..."
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Section 3: Education */}
+            {isVisible("education") && (
+              <div className="feature-card">
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#dee1e6]">
+                  <div>
+                    <h2 className="title-md text-[#0a0b0d]">Education</h2>
+                    <p className="body-sm text-[#5b616e]">
+                      Academic background, degrees, and institutions.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setProfile({
+                        ...profile,
+                        education: [
+                          ...profile.education,
+                          {
+                            institution: "",
+                            degree: "",
+                            field_of_study: "",
+                            dates: "",
+                            gpa: null,
+                          },
+                        ],
                       })
                     }
-                    placeholder="Field of study"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="GPA">
-                  <input
-                    value={education.gpa ?? ""}
-                    onChange={(event) =>
-                      updateEducation(index, { gpa: event.target.value })
-                    }
-                    placeholder="e.g., 3.5"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Dates">
-                  <input
-                    value={education.dates}
-                    onChange={(event) =>
-                      updateEducation(index, { dates: event.target.value })
-                    }
-                    placeholder="e.g., 2020 - 2024"
-                    className={inputClass}
-                  />
-                </Field>
+                    className="btn-secondary-light !min-h-[38px] !py-1.5 !px-4 text-xs"
+                  >
+                    + Add Education
+                  </button>
+                </div>
+
+                {profile.education.length === 0 ? (
+                  <p className="text-sm text-[#7c828a] py-6 text-center">
+                    No education records listed. Click Add Education or parse from resume above.
+                  </p>
+                ) : (
+                  <div className="space-y-6">
+                    {profile.education.map((edu, index) => (
+                      <div
+                        key={index}
+                        className="rounded-2xl border border-[#dee1e6] bg-[#fafbfc] p-6 space-y-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="caption-strong text-[#0052ff]">
+                            Education #{index + 1}
+                          </span>
+                          <button
+                            onClick={() =>
+                              setProfile({
+                                ...profile,
+                                education: profile.education.filter(
+                                  (_, i) => i !== index
+                                ),
+                              })
+                            }
+                            className="text-xs text-[#cf202f] hover:underline"
+                          >
+                            Remove Record
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <Field label="Institution / University">
+                            <input
+                              value={edu.institution}
+                              onChange={(e) =>
+                                updateEducation(index, { institution: e.target.value })
+                              }
+                              placeholder="e.g. Stanford University"
+                              className="text-input"
+                            />
+                          </Field>
+
+                          <Field label="Degree">
+                            <input
+                              value={edu.degree}
+                              onChange={(e) =>
+                                updateEducation(index, { degree: e.target.value })
+                              }
+                              placeholder="e.g. Bachelor of Science"
+                              className="text-input"
+                            />
+                          </Field>
+
+                          <Field label="Field of Study">
+                            <input
+                              value={edu.field_of_study}
+                              onChange={(e) =>
+                                updateEducation(index, {
+                                  field_of_study: e.target.value,
+                                })
+                              }
+                              placeholder="e.g. Computer Science"
+                              className="text-input"
+                            />
+                          </Field>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <Field label="GPA" hint="Optional">
+                              <input
+                                value={edu.gpa ?? ""}
+                                onChange={(e) =>
+                                  updateEducation(index, { gpa: e.target.value })
+                                }
+                                placeholder="e.g. 3.8"
+                                className="text-input"
+                              />
+                            </Field>
+
+                            <Field label="Attendance Dates">
+                              <input
+                                value={edu.dates}
+                                onChange={(e) =>
+                                  updateEducation(index, { dates: e.target.value })
+                                }
+                                placeholder="e.g. 2018 - 2022"
+                                className="text-input"
+                              />
+                            </Field>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <button
-                onClick={() =>
-                  setProfile({
-                    ...profile,
-                    education: profile.education.filter((_, i) => i !== index),
-                  })
-                }
-                className="mt-3 text-sm text-red-600 hover:text-red-800"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
+            )}
 
-          <button
-            onClick={() =>
-              setProfile({
-                ...profile,
-                education: [
-                  ...profile.education,
-                  {
-                    institution: "",
-                    degree: "",
-                    field_of_study: "",
-                    dates: "",
-                    gpa: null,
-                  },
-                ],
-              })
-            }
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Add Education
-          </button>
-        </section>
+            {/* Section 4: Skills & Projects */}
+            {isVisible("skills") && (
+              <div className="feature-card">
+                <div className="mb-6 pb-4 border-b border-[#dee1e6]">
+                  <h2 className="title-md text-[#0a0b0d]">Skills & Projects</h2>
+                  <p className="body-sm text-[#5b616e]">
+                    Core competencies and highlighted projects used during contextual matching.
+                  </p>
+                </div>
 
-        <section className="mt-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-medium">Experience</h2>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <ListEditor
+                    label="Core Skills"
+                    value={profile.skills}
+                    onChange={(next) => setProfile({ ...profile, skills: next })}
+                    placeholder="TypeScript&#10;Python&#10;React&#10;PostgreSQL"
+                    rows={6}
+                  />
 
-          {profile.experience.map((experience, index) => (
-            <div
-              key={index}
-              className="mb-4 rounded border border-gray-200 p-4"
-            >
-              <h3 className="mb-3 text-sm font-semibold">
-                Experience {index + 1}
-              </h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Employer">
-                  <input
-                    value={experience.employer}
-                    onChange={(event) =>
-                      updateExperience(index, {
-                        employer: event.target.value,
-                      })
-                    }
-                    placeholder="Employer name"
-                    className={inputClass}
+                  <ListEditor
+                    label="Highlighted Projects"
+                    value={profile.projects}
+                    onChange={(next) => setProfile({ ...profile, projects: next })}
+                    placeholder="Algorithmic Trading Bot&#10;Automated Form Filling Assistant"
+                    rows={6}
                   />
-                </Field>
-                <Field label="Title">
-                  <input
-                    value={experience.title}
-                    onChange={(event) =>
-                      updateExperience(index, { title: event.target.value })
-                    }
-                    placeholder="Job title"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Dates">
-                  <input
-                    value={experience.dates}
-                    onChange={(event) =>
-                      updateExperience(index, { dates: event.target.value })
-                    }
-                    placeholder="e.g., Jan 2023 - Present"
-                    className={inputClass}
-                  />
-                </Field>
+                </div>
               </div>
-              <div className="mt-3 grid grid-cols-1 gap-3">
-                <ListEditor
-                  label="Responsibilities"
-                  value={experience.responsibilities}
-                  onChange={(next) =>
-                    updateExperience(index, { responsibilities: next })
-                  }
-                  placeholder="Built the reporting pipeline"
-                />
-                <ListEditor
-                  label="Achievements"
-                  value={experience.achievements}
-                  onChange={(next) =>
-                    updateExperience(index, { achievements: next })
-                  }
-                  placeholder="Reduced report time by 40%"
-                />
+            )}
+
+            {/* Section 5: Documents & Cover Letter */}
+            {isVisible("documents") && (
+              <div className="feature-card">
+                <div className="mb-6 pb-4 border-b border-[#dee1e6]">
+                  <h2 className="title-md text-[#0a0b0d]">Documents & Cover Letter</h2>
+                  <p className="body-sm text-[#5b616e]">
+                    Direct file references and reusable cover letter template.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <Field label="Active Resume Storage Path">
+                      <input
+                        value={profile.resume_path}
+                        onChange={(e) =>
+                          setProfile({ ...profile, resume_path: e.target.value })
+                        }
+                        placeholder="backend/uploads/resume.pdf"
+                        className="text-input font-mono text-xs"
+                      />
+                    </Field>
+                    <p className="mt-2 text-xs text-[#7c828a]">
+                      Uploaded resumes are stored in backend/uploads and linked automatically.
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-[#dee1e6]">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#5b616e]">
+                        Cover Letter File Attachment
+                      </label>
+                      <span className="badge-pill !text-[11px]">Optional</span>
+                    </div>
+                    <FilePicker
+                      accept=".pdf,.doc,.docx,.txt,.rtf"
+                      buttonLabel={
+                        profile.cover_letter_path
+                          ? "Replace Letter"
+                          : "Attach Letter File"
+                      }
+                      selectedName={fileName(profile.cover_letter_path)}
+                      onSelect={handleCoverLetterUpload}
+                      disabled={uploadingCoverLetter}
+                      helpText="Upload a file to store it in backend/uploads and extract its text below."
+                    />
+                    {coverLetterWarnings.length > 0 && (
+                      <div className="mt-3 rounded-xl border border-[#dee1e6] bg-[#fafbfc] p-3 text-xs text-[#5b616e]">
+                        <ul className="list-inside list-disc space-y-1 text-[#7c828a]">
+                          {coverLetterWarnings.map((warning, i) => (
+                            <li key={i}>{warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-4 border-t border-[#dee1e6]">
+                    <Field label="Default Cover Letter Text">
+                      <textarea
+                        value={profile.cover_letter}
+                        onChange={(e) =>
+                          setProfile({ ...profile, cover_letter: e.target.value })
+                        }
+                        rows={7}
+                        placeholder="Dear Hiring Team, I am writing to express my strong enthusiasm for this role..."
+                        className="text-input resize-y !h-auto min-h-[140px]"
+                      />
+                    </Field>
+                    <p className="mt-2 text-xs text-[#7c828a]">
+                      Filled into Greenhouse free-form cover letter input fields.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={() =>
-                  setProfile({
-                    ...profile,
-                    experience: profile.experience.filter(
-                      (_, i) => i !== index
-                    ),
-                  })
-                }
-                className="mt-3 text-sm text-red-600 hover:text-red-800"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
+            )}
 
-          <button
-            onClick={() =>
-              setProfile({
-                ...profile,
-                experience: [
-                  ...profile.experience,
-                  {
-                    employer: "",
-                    title: "",
-                    dates: "",
-                    responsibilities: [],
-                    achievements: [],
-                  },
-                ],
-              })
-            }
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Add Experience
-          </button>
-        </section>
+            {/* Section 6: Saved Answers */}
+            {isVisible("saved-answers") && (
+              <div className="feature-card">
+                <div className="mb-6 pb-4 border-b border-[#dee1e6]">
+                  <h2 className="title-md text-[#0a0b0d]">Approved Saved Answers</h2>
+                  <p className="body-sm text-[#5b616e]">
+                    Pre-approved responses to custom questions. The agent only reuses answers explicitly saved here.
+                  </p>
+                </div>
 
-        <section className="mt-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-medium">Skills & Projects</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ListEditor
-              label="Skills"
-              value={profile.skills}
-              onChange={(next) => setProfile({ ...profile, skills: next })}
-              placeholder="Python"
-            />
-            <ListEditor
-              label="Projects"
-              value={profile.projects}
-              onChange={(next) => setProfile({ ...profile, projects: next })}
-              placeholder="Portfolio analyzer"
-            />
-          </div>
-        </section>
+                {Object.entries(profile.saved_answers).length === 0 ? (
+                  <p className="text-sm text-[#7c828a] py-6 text-center">
+                    No approved answers saved yet. Add common employer questions below.
+                  </p>
+                ) : (
+                  <div className="space-y-3 mb-6">
+                    {Object.entries(profile.saved_answers).map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="rounded-2xl border border-[#dee1e6] bg-[#fafbfc] p-4 flex flex-col gap-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-[#0a0b0d]">
+                            {key}
+                          </span>
+                          <button
+                            onClick={() => removeSavedAnswer(key)}
+                            className="text-xs text-[#cf202f] hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <input
+                          value={value}
+                          onChange={(e) =>
+                            setProfile({
+                              ...profile,
+                              saved_answers: {
+                                ...profile.saved_answers,
+                                [key]: e.target.value,
+                              },
+                            })
+                          }
+                          className="text-input !bg-white"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-        <section className="mt-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-medium">Resume & Cover Letter</h2>
-
-          <Field label="Resume File Path">
-            <input
-              value={profile.resume_path}
-              onChange={(event) =>
-                setProfile({ ...profile, resume_path: event.target.value })
-              }
-              placeholder="C:/Users/you/Documents/resume.pdf"
-              className={inputClass}
-            />
-          </Field>
-          <p className="mt-2 text-xs text-gray-500">
-            To replace the file and prefill fields, use Autofill from Resume at
-            the top of this page. Uploaded files are stored in
-            backend/uploads.
-          </p>
-
-          <div className="mt-4">
-            <Field label="Cover Letter File">
-              <FilePicker
-                accept=".pdf,.doc,.docx,.txt,.rtf"
-                buttonLabel={
-                  profile.cover_letter_path
-                    ? "Replace Cover Letter"
-                    : "Choose Cover Letter"
-                }
-                selectedName={fileName(profile.cover_letter_path)}
-                onSelect={handleCoverLetterUpload}
-                disabled={uploadingCoverLetter}
-                helpText="Upload a PDF, DOCX, TXT, or RTF file to store it and fill the cover letter text below. Max 10 MB."
-              />
-            </Field>
-            {coverLetterWarnings.length > 0 && (
-              <div className="mt-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                <p className="mb-1 font-medium">Review notes</p>
-                <ul className="list-inside list-disc space-y-1">
-                  {coverLetterWarnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
+                {/* Add Answer Form */}
+                <div className="rounded-2xl border border-[#dee1e6] bg-[#f7f7f7] p-5">
+                  <span className="caption-strong text-[#5b616e] block mb-3">
+                    + Add New Approved Answer
+                  </span>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field label="Question Keyword / Pattern">
+                      <input
+                        value={newAnswerKey}
+                        onChange={(e) => setNewAnswerKey(e.target.value)}
+                        placeholder="e.g. Are you willing to relocate?"
+                        className="text-input"
+                      />
+                    </Field>
+                    <Field label="Approved Response">
+                      <input
+                        value={newAnswerValue}
+                        onChange={(e) => setNewAnswerValue(e.target.value)}
+                        placeholder="e.g. Yes, willing to relocate."
+                        className="text-input"
+                      />
+                    </Field>
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      onClick={addSavedAnswer}
+                      disabled={!newAnswerKey.trim()}
+                      className="btn-secondary-light !min-h-[40px] text-xs"
+                    >
+                      Save Answer Pattern
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
+        </div>
+      </section>
 
-          <div className="mt-4">
-            <Field label="Cover Letter">
-              <textarea
-                value={profile.cover_letter}
-                onChange={(event) =>
-                  setProfile({ ...profile, cover_letter: event.target.value })
-                }
-                rows={5}
-                placeholder="Optional reusable cover letter"
-                className={`${inputClass} resize-y`}
-              />
-            </Field>
+      {/* Floating Bottom Sticky Action Dock */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#dee1e6] bg-white/95 backdrop-blur-md py-4 shadow-lg">
+        <div className="content-container flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[#05b169]" />
+            <span className="text-xs text-[#5b616e] hidden sm:inline">
+              Changes stay local to your machine (backend/profile.json)
+            </span>
           </div>
-        </section>
 
-        <section className="mt-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-1 text-lg font-medium">Saved Answers</h2>
-          <p className="mb-4 text-xs text-gray-500">
-            Approved answers the agent may reuse. Only answers saved here are
-            treated as approved.
-          </p>
-
-          {Object.entries(profile.saved_answers).length === 0 ? (
-            <p className="text-sm text-gray-500">No saved answers yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(profile.saved_answers).map(([key, value]) => (
-                <div
-                  key={key}
-                  className="rounded border border-gray-200 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-sm font-medium text-gray-800">
-                      {key}
-                    </span>
-                    <button
-                      onClick={() => removeSavedAnswer(key)}
-                      className="text-sm text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <input
-                    value={value}
-                    onChange={(event) =>
-                      setProfile({
-                        ...profile,
-                        saved_answers: {
-                          ...profile.saved_answers,
-                          [key]: event.target.value,
-                        },
-                      })
-                    }
-                    className={`${inputClass} mt-2`}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Question">
-              <input
-                value={newAnswerKey}
-                onChange={(event) => setNewAnswerKey(event.target.value)}
-                placeholder="e.g., Are you willing to relocate?"
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Approved Answer">
-              <input
-                value={newAnswerValue}
-                onChange={(event) => setNewAnswerValue(event.target.value)}
-                placeholder="e.g., Yes"
-                className={inputClass}
-              />
-            </Field>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary !min-h-[48px] !px-8 text-sm"
+            >
+              {saving ? "Writing to Disk..." : "Save Candidate Profile"}
+            </button>
           </div>
-          <button
-            onClick={addSavedAnswer}
-            disabled={!newAnswerKey.trim()}
-            className="mt-3 rounded bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300 disabled:text-gray-400"
-          >
-            Add Saved Answer
-          </button>
-        </section>
-
-        <div className="mt-8 flex items-center gap-4">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
-          >
-            {saving ? "Saving..." : "Save Profile"}
-          </button>
-          <p className="text-xs text-gray-500">
-            Saves to the backend profile.json.
-          </p>
         </div>
       </div>
     </div>

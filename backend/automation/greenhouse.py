@@ -28,7 +28,9 @@ INSPECT_SCRIPT = """
       '.field-wrapper, .field, .question, fieldset, .application-question'
     );
     const directLabel = container
-      ? Array.from(container.children).find(child => child.tagName === 'LABEL')
+      ? Array.from(container.children).find(
+          child => child.tagName === 'LEGEND' || child.tagName === 'LABEL'
+        )
       : null;
     const containerText = directLabel
       ? directLabel.innerText
@@ -498,6 +500,206 @@ def _profile_value(profile, key):
     return ""
 
 
+def _education_value(profile, control):
+    """Return an explicitly saved education fact for a clearly labeled field."""
+    education = [
+        item for item in (profile.get("education") or []) if isinstance(item, dict)
+    ]
+    if len(education) != 1:
+        return ""
+
+    item = education[0]
+    question = normalize(
+        " ".join(
+            str(control.get(key) or "")
+            for key in ("label", "question", "name", "id")
+        )
+    )
+    if not question:
+        return ""
+
+    dates = str(item.get("dates") or "").strip()
+    date_range = re.split(r"\s+(?:-|–|—|to)\s+", dates, maxsplit=1, flags=re.I)
+    start_date = str(item.get("start_date") or "").strip()
+    end_date = str(
+        item.get("end_date")
+        or item.get("graduation_date")
+        or item.get("expected_graduation_date")
+        or ""
+    ).strip()
+    if not start_date and len(date_range) == 2:
+        start_date = date_range[0].strip()
+    if not end_date and len(date_range) == 2:
+        end_date = date_range[1].strip()
+
+    if any(term in question for term in ("graduation", "expected to graduate")):
+        return end_date
+    if any(term in question for term in ("start date", "enrollment date", "from date")):
+        return start_date
+    if any(term in question for term in ("end date", "completion date", "to date")):
+        return end_date
+    if any(term in question for term in ("dates attended", "attendance dates")):
+        return dates or " - ".join(
+            value for value in (start_date, end_date) if value
+        )
+
+    field_name = ""
+    if any(term in question for term in ("gpa", "grade point average")):
+        field_name = "gpa"
+    elif any(
+        term in question
+        for term in (
+            "field of study",
+            "area of study",
+            "major",
+            "discipline",
+            "concentration",
+        )
+    ):
+        field_name = "field_of_study"
+    elif any(term in question for term in ("degree", "qualification")):
+        field_name = "degree"
+    elif any(
+        term in question
+        for term in (
+            "school",
+            "university",
+            "college",
+            "institution",
+        )
+    ):
+        field_name = "institution"
+
+    if field_name:
+        aliases = {
+            "institution": ("institution", "school", "university", "college"),
+            "degree": ("degree", "qualification"),
+            "field_of_study": ("field_of_study", "field", "major"),
+            "gpa": ("gpa",),
+        }
+        for key in aliases[field_name]:
+            value = item.get(key)
+            if value:
+                return str(value).strip()
+        return ""
+
+    return ""
+
+
+def _work_authorization_answer(profile, control):
+    """Map only an explicit work-authorization profile fact to a form answer."""
+    question = normalize(
+        " ".join(
+            str(control.get(key) or "")
+            for key in ("label", "question", "name", "id")
+        )
+    )
+    if not question or any(term in question for term in ("citizen", "citizenship")):
+        return ""
+    if not any(
+        term in question
+        for term in (
+            "authorized to work",
+            "authorised to work",
+            "right to work",
+            "license to work",
+            "licence to work",
+            "legal right to work",
+            "legally entitled to work",
+            "work authorization",
+            "work authorisation",
+            "work permit",
+            "eligible to work",
+            "sponsorship",
+        )
+    ):
+        return ""
+
+    fact = str(profile.get("work_authorization") or "").strip()
+    if not fact:
+        return ""
+    options = control.get("options") or []
+    option_texts = [
+        str(option.get("text") or option.get("value") or "")
+        if isinstance(option, dict)
+        else str(option)
+        for option in options
+    ]
+    for option in option_texts:
+        if _option_matches(option, fact):
+            return option
+
+    fact_text = normalize(fact)
+    is_sponsorship_question = "sponsorship" in question
+    if is_sponsorship_question:
+        if any(
+            phrase in fact_text
+            for phrase in (
+                "require sponsorship",
+                "requires sponsorship",
+                "need sponsorship",
+                "needs sponsorship",
+                "sponsorship required",
+            )
+        ):
+            answer = "yes"
+        elif any(
+            phrase in fact_text
+            for phrase in (
+                "without sponsorship",
+                "no sponsorship",
+                "do not require sponsorship",
+                "does not require sponsorship",
+            )
+        ):
+            answer = "no"
+        else:
+            answer = ""
+    elif fact_text in ("yes", "y", "true"):
+        answer = "yes"
+    elif fact_text in ("no", "n", "false"):
+        answer = "no"
+    elif any(
+        phrase in fact_text
+        for phrase in (
+            "not authorized",
+            "not authorised",
+            "not eligible",
+            "not licensed to work",
+            "not licenced to work",
+            "no work permit",
+            "no work license",
+            "no work licence",
+            "do not have a license to work",
+            "do not have a licence to work",
+            "do not hold a work permit",
+        )
+    ):
+        answer = "no"
+    elif any(
+        phrase in fact_text
+        for phrase in (
+            "authorized to work",
+            "authorised to work",
+            "eligible to work",
+            "licensed to work",
+            "licenced to work",
+            "license to work",
+            "licence to work",
+            "have a work permit",
+            "hold a work permit",
+        )
+    ):
+        answer = "yes"
+    else:
+        answer = ""
+
+    for option in option_texts:
+        if _option_matches(option, answer):
+            return option
+    return answer if not option_texts else ""
+
+
 def _find_answer_in(mapping, *texts):
     for text in texts:
         wanted = normalize(text)
@@ -786,6 +988,10 @@ def fill_application(page, profile, resolved_answers=None, ai_mapper=None):
                 profile, control.get("label", ""), control.get("question", "")
             )
             if not answer:
+                answer = _education_value(profile, control)
+            if not answer:
+                answer = _work_authorization_answer(profile, control)
+            if not answer:
                 if control.get("required"):
                     answer, ai_source = ai_fill_or_review(
                         control,
@@ -834,6 +1040,20 @@ def fill_application(page, profile, resolved_answers=None, ai_mapper=None):
         answer = _find_resolved_answer(resolved_answers, question) or _find_saved_answer(
             profile, question
         )
+        if not answer:
+            group_control = {
+                "label": question,
+                "question": question,
+                "name": name,
+                "type": "radio",
+                "required": group["required"],
+                "options": [
+                    option["text"]
+                    for option in group["options"]
+                    if option["text"]
+                ],
+            }
+            answer = _work_authorization_answer(profile, group_control)
         option_texts = [option["text"] for option in group["options"] if option["text"]]
         ai_source = None
         all_radio = all(

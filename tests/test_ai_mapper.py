@@ -40,8 +40,10 @@ PROFILE = {
             "institution": "Test University",
             "degree": "B.S. Computer Science",
             "field_of_study": "Computer Science",
+            "dates": "Aug 2018 - May 2022",
             "start_date": "2018",
             "end_date": "2022",
+            "gpa": "3.8",
         }
     ],
     "experience": [
@@ -268,6 +270,7 @@ class MapperValidationTests(unittest.TestCase):
         self.assertNotIn("555-0100", prompt)
         self.assertNotIn("Test Candidate", prompt)
         self.assertIn('"saved_answers"', prompt)
+        self.assertIn("Aug 2018 - May 2022", prompt)
         self.assertNotIn("Are you legally authorized", prompt)
 
     def test_request_includes_json_schema(self):
@@ -466,6 +469,103 @@ class FillerIntegrationTests(unittest.TestCase):
         self.assertEqual(self.page.input_value("#question_1000"), "JavaScript")
         self.assertEqual(result.ai_filled, [])
         self.assertEqual(len(stub.calls), 0)
+
+    def test_education_fields_fill_from_single_explicit_record(self):
+        self.page.set_content(
+            """
+            <form id="application-form">
+              <label for="school">School</label><input id="school" name="school">
+              <label for="major">Field of study</label><input id="major" name="major">
+              <label for="gpa">GPA</label><input id="gpa" name="gpa">
+              <label for="graduation">Expected graduation date</label>
+              <input id="graduation" name="graduation">
+            </form>
+            """
+        )
+        stub = StubMapper(AIMapping(action="error", reason="AI should not be used."))
+
+        result = fill_application(self.page, PROFILE, ai_mapper=stub)
+
+        self.assertEqual(self.page.input_value("#school"), "Test University")
+        self.assertEqual(self.page.input_value("#major"), "Computer Science")
+        self.assertEqual(self.page.input_value("#gpa"), "3.8")
+        self.assertEqual(self.page.input_value("#graduation"), "2022")
+        self.assertEqual(len(stub.calls), 0)
+        self.assertEqual(result.review_items, [])
+
+    def test_explicit_work_authorization_fills_radio_without_ai(self):
+        self.page.set_content(
+            """
+            <form id="application-form">
+              <fieldset>
+                <legend>Are you legally authorized to work in the United States?</legend>
+                <label><input type="radio" name="authorized" value="yes" required>Yes</label>
+                <label><input type="radio" name="authorized" value="no" required>No</label>
+              </fieldset>
+            </form>
+            """
+        )
+        stub = StubMapper(AIMapping(action="error", reason="AI should not be used."))
+
+        result = fill_application(self.page, PROFILE, ai_mapper=stub)
+
+        self.assertTrue(self.page.locator('input[value="yes"]').is_checked())
+        self.assertEqual(len(stub.calls), 0)
+        self.assertEqual(result.review_items, [])
+
+    def test_explicit_work_license_answers_matching_question(self):
+        self.page.set_content(
+            """
+            <form id="application-form">
+              <fieldset>
+                <legend>Do you have a license to work in the United States?</legend>
+                <label><input type="radio" name="license" value="yes" required>Yes</label>
+                <label><input type="radio" name="license" value="no" required>No</label>
+              </fieldset>
+            </form>
+            """
+        )
+        profile = json.loads(json.dumps(PROFILE))
+        profile["work_authorization"] = (
+            "I have a license to work in the United States"
+        )
+        stub = StubMapper(AIMapping(action="error", reason="AI should not be used."))
+
+        result = fill_application(self.page, profile, ai_mapper=stub)
+
+        self.assertTrue(self.page.locator('input[value="yes"]').is_checked())
+        self.assertEqual(len(stub.calls), 0)
+        self.assertEqual(result.review_items, [])
+
+    def test_work_authorization_is_not_guessed_from_country(self):
+        self.page.set_content(
+            """
+            <form id="application-form">
+              <fieldset>
+                <legend>Are you legally authorized to work in the United States?</legend>
+                <label><input type="radio" name="authorized" value="yes" required>Yes</label>
+                <label><input type="radio" name="authorized" value="no" required>No</label>
+              </fieldset>
+            </form>
+            """
+        )
+        profile = json.loads(json.dumps(PROFILE))
+        profile["work_authorization"] = ""
+
+        def unexpected_request(_payload):
+            self.fail("Sensitive questions must not reach AI.")
+
+        mapper = AIMapper(
+            profile,
+            api_key="test-key",
+            transport=unexpected_request,
+        )
+
+        result = fill_application(self.page, profile, ai_mapper=mapper)
+
+        self.assertFalse(self.page.locator('input[value="yes"]').is_checked())
+        self.assertEqual(mapper.calls_made, 0)
+        self.assertTrue(result.review_items)
 
 
 if __name__ == "__main__":

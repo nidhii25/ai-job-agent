@@ -29,9 +29,9 @@ export default function ReviewItems({
 
   if (items.length === 0) {
     return (
-      <p className="mt-2 text-sm text-gray-500">
-        No review items for this application.
-      </p>
+      <div className="rounded-2xl border border-[#dee1e6] bg-[#f7f7f7] p-6 text-center text-sm text-[#5b616e]">
+        No review items for this application. All required fields are grounded.
+      </div>
     );
   }
 
@@ -60,36 +60,69 @@ export default function ReviewItems({
   };
 
   return (
-    <div className="mt-2">
+    <div className="mt-4 space-y-4">
       {error && (
-        <p className="mb-2 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+        <div className="rounded-xl border border-[#dee1e6] bg-[#fafbfc] p-3.5 text-sm text-[#cf202f]">
           {error}
-        </p>
+        </div>
       )}
-      <ul className="space-y-2 text-sm text-gray-700">
+
+      <ul className="space-y-3">
         {items.map((item) => {
           const fileRelated = /resume|cover letter|file/i.test(
             `${item.field_name} ${item.reason}`
           );
+          const isResolved = Boolean(item.resolved_at);
+
           return (
             <li
               key={item.id}
-              className="rounded border border-gray-200 bg-white p-3"
+              className={`rounded-2xl border p-5 transition-all ${
+                isResolved
+                  ? "border-[#dee1e6] bg-[#fafbfc]"
+                  : "border-[#dee1e6] bg-white shadow-sm"
+              }`}
             >
-              <p className="font-medium">{item.field_name}</p>
-              <p className="text-gray-600">{item.reason}</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-base font-semibold text-[#0a0b0d]">
+                  {item.field_name}
+                </span>
+                {isResolved ? (
+                  <span className="status-pill-submitted text-xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#05b169]" />
+                    Resolved
+                  </span>
+                ) : (
+                  <span className="status-pill-review text-xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#f4b000]" />
+                    Action Required
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-2 text-sm text-[#5b616e] leading-relaxed">
+                {item.reason}
+              </p>
+
               {item.suggested_value && (
-                <p className="text-gray-500">
-                  Suggested: {item.suggested_value}
-                </p>
+                <div className="mt-3 rounded-xl border border-[#eef0f3] bg-[#f7f7f7] p-3 text-xs">
+                  <span className="font-semibold uppercase tracking-wider text-[#7c828a] block mb-1">
+                    Suggested Value
+                  </span>
+                  <span className="font-mono text-[#0a0b0d] text-sm break-all">
+                    {item.suggested_value}
+                  </span>
+                </div>
               )}
 
-              {item.resolved_at ? (
-                <p className="mt-2 text-xs text-green-700">
-                  Resolved: {item.user_resolution}
-                </p>
+              {isResolved ? (
+                <div className="mt-3.5 flex items-center gap-2 rounded-xl bg-[#eef0f3]/60 px-3.5 py-2.5 text-xs text-[#0a0b0d]">
+                  <span className="font-semibold text-[#05b169]">✓</span>
+                  <span className="font-medium text-[#5b616e]">Saved Answer:</span>
+                  <span className="font-semibold">{item.user_resolution}</span>
+                </div>
               ) : (
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
                   <input
                     value={drafts[item.id] ?? item.suggested_value ?? ""}
                     onChange={(event) =>
@@ -98,27 +131,24 @@ export default function ReviewItems({
                         [item.id]: event.target.value,
                       }))
                     }
-                    placeholder="Type your answer"
+                    placeholder="Type your approved answer"
                     disabled={disabled || pendingId === item.id}
-                    className="min-w-0 flex-1 rounded border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-input flex-1"
                   />
                   <button
                     onClick={() => save(item)}
                     disabled={disabled || pendingId === item.id}
-                    className="rounded bg-yellow-500 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-600 disabled:bg-yellow-300"
+                    className="btn-primary shrink-0"
                   >
-                    {pendingId === item.id ? "Saving..." : "Save answer"}
+                    {pendingId === item.id ? "Saving..." : "Save Answer"}
                   </button>
                 </div>
               )}
 
-              {!item.resolved_at && fileRelated && (
-                <p className="mt-2 text-xs text-gray-500">
-                  If this is about a file, upload the file on{" "}
-                  <a href="/profile" className="underline">
-                    My Profile
-                  </a>{" "}
-                  or above, then save a short note here.
+              {!isResolved && fileRelated && (
+                <p className="mt-2.5 text-xs text-[#7c828a]">
+                  If this requires a document, attach it in Candidate Profile or the section above,
+                  then enter a brief confirmation note here.
                 </p>
               )}
             </li>
